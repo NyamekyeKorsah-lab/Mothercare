@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ export default function Categories() {
   const [showEdit, setShowEdit] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
 
-  // ✅ Fetch categories
+  // ✅ Fetch categories from Supabase
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -74,26 +74,30 @@ export default function Categories() {
   });
 
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-6 px-3 sm:px-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-2 sm:px-4 md:px-0">
-        <div className="text-left w-full">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100">
-            Categories
-          </h1>
-          <p className="text-gray-500 text-sm sm:text-base">
-            Organize your products into clean, structured categories
+      <div className="flex items-start justify-between flex-wrap sm:flex-nowrap">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Categories</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-8 leading-snug break-words">
+            Organize your products into clean,<br className="block sm:hidden" /> structured categories
           </p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="w-full sm:w-auto self-start sm:self-end">
-          <Plus className="mr-2 h-4 w-4" /> Add Category
+
+        <Button
+          onClick={() => setShowAdd(true)}
+          className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3 mt-1 sm:mt-0"
+        >
+          <Plus className="h-4 w-4" /> Add Category
         </Button>
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 px-2 sm:px-4 md:px-0">
-        <Card className="p-4 sm:p-6 rounded-xl shadow-sm flex flex-col items-center justify-center w-full">
-          <h3 className="text-xs sm:text-sm text-gray-500 font-medium">Total Categories</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <Card className="p-4 sm:p-6 rounded-xl shadow-md flex flex-col items-center justify-center">
+          <h3 className="text-xs sm:text-sm text-gray-500 font-medium">
+            Total Categories
+          </h3>
           <p className="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
             {categories.length}
           </p>
@@ -101,53 +105,58 @@ export default function Categories() {
       </div>
 
       {/* Categories Table */}
-      <Card className="shadow-card w-full px-1 sm:px-3 md:px-0">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse text-sm sm:text-base">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="py-3 px-2 sm:px-4 font-semibold">Category</th>
-                <th className="py-3 px-2 sm:px-4 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {categories.map((cat: any) => (
-                <tr
-                  key={cat.id}
-                  className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                >
-                  <td className="py-3 px-2 sm:px-4 break-words">{cat.name}</td>
-                  <td className="py-3 px-2 sm:px-4 text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedCategory(cat);
-                        setShowEdit(true);
-                      }}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => deleteCategoryMutation.mutate(cat.id)}
-                      disabled={deleteCategoryMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </td>
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-base sm:text-lg">Category List</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto px-0">
+          {categories.length > 0 ? (
+            <table className="w-full text-left border-collapse text-sm sm:text-base">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="py-3 px-4 font-semibold">Category</th>
+                  <th className="py-3 px-4 text-right font-semibold">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {categories.length === 0 && (
-          <p className="text-center text-gray-500 py-6 text-sm sm:text-base">
-            No categories yet. Add one to get started.
-          </p>
-        )}
+              </thead>
+              <tbody>
+                {categories.map((cat: any) => (
+                  <tr
+                    key={cat.id}
+                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  >
+                    <td className="py-3 px-4">{cat.name}</td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedCategory(cat);
+                            setShowEdit(true);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => deleteCategoryMutation.mutate(cat.id)}
+                          disabled={deleteCategoryMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-center text-gray-500 py-6 text-sm sm:text-base">
+              No categories yet. Add one to get started.
+            </p>
+          )}
+        </CardContent>
       </Card>
 
       {/* Add Category Modal */}
