@@ -36,7 +36,6 @@ const Sales = () => {
   const [quantity, setQuantity] = useState<number | "">("");
   const [total, setTotal] = useState<number | "">("");
 
-  // ✅ Fetch products
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -48,7 +47,6 @@ const Sales = () => {
     },
   });
 
-  // ✅ Fetch sales
   const { data: sales = [] } = useQuery({
     queryKey: ["sales"],
     queryFn: async () => {
@@ -61,7 +59,6 @@ const Sales = () => {
     },
   });
 
-  // ✅ Add sale
   const addSaleMutation = useMutation({
     mutationFn: async (newSale: any) => {
       const { error } = await supabase.from("sales").insert([newSale]);
@@ -78,7 +75,6 @@ const Sales = () => {
     onError: (err: any) => toast.error("❌ Failed to add sale: " + err.message),
   });
 
-  // ✅ Delete sale
   const deleteSaleMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("sales").delete().eq("id", id);
@@ -91,7 +87,6 @@ const Sales = () => {
     onError: (err: any) => toast.error("❌ Failed to delete sale: " + err.message),
   });
 
-  // ✅ Auto-calc total
   useEffect(() => {
     if (selectedProduct && quantity) {
       const totalValue = Number(selectedProduct.unit_price) * Number(quantity);
@@ -117,20 +112,20 @@ const Sales = () => {
   const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 px-3 sm:px-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-2 sm:px-4 md:px-0">
-        <div className="text-left w-full">
-          <h1 className="text-2xl sm:text-3xl font-semibold">Sales</h1>
-          <p className="text-muted-foreground text-sm sm:text-base mt-1">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Sales</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Manage customer sales, invoices, and transactions
           </p>
         </div>
 
-        {/* Add Sale */}
+        {/* Add Sale Button */}
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto gap-2 self-start sm:self-end">
+            <Button className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3">
               <Plus className="h-4 w-4" /> Add Sale
             </Button>
           </DialogTrigger>
@@ -198,72 +193,78 @@ const Sales = () => {
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4 w-full px-1 sm:px-2 md:px-0">
-        {[
-          {
-            title: "Total Revenue",
-            value: formatCurrency(totalRevenue),
-            sub: `${totalSales} sales total`,
-          },
-          {
-            title: "Total Sales",
-            value: totalSales,
-            sub: "Recorded sales",
-          },
-          {
-            title: "Average Sale",
-            value: formatCurrency(averageSale),
-            sub: "Per transaction",
-          },
-        ].map((item, i) => (
-          <Card
-            key={i}
-            className="p-3 sm:p-4 rounded-xl shadow-sm flex flex-col justify-center items-start sm:items-center overflow-hidden"
-          >
-            <CardHeader className="p-0 text-left sm:text-center">
-              <CardTitle className="text-[11px] sm:text-sm text-muted-foreground font-medium">
-                {item.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 mt-1 w-full text-left sm:text-center">
-              {/* ✅ FIXED: Full value always visible */}
-              <p className="font-bold text-lg sm:text-2xl text-center w-full break-all sm:break-normal whitespace-pre-wrap leading-snug tracking-tight">
-                {item.value}
-              </p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                {item.sub}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Cards Section */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <Card className="p-3 sm:p-4 rounded-xl shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+              Total Revenue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg sm:text-2xl font-bold break-words">
+              {formatCurrency(totalRevenue)}
+            </p>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">
+              {totalSales} sales total
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="p-3 sm:p-4 rounded-xl shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+              Total Sales
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg sm:text-2xl font-bold">{totalSales}</p>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Recorded sales</p>
+          </CardContent>
+        </Card>
+
+        <Card className="p-3 sm:p-4 rounded-xl shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+              Average Sale
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg sm:text-2xl font-bold break-words">
+              {formatCurrency(averageSale)}
+            </p>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Per transaction</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Sales Table */}
-      <Card className="shadow-sm w-full px-1 sm:px-3 md:px-0">
-        <CardHeader className="px-2 sm:px-4">
+      <Card className="shadow-card">
+        <CardHeader>
           <CardTitle className="text-base sm:text-lg">Sales Records</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto w-full">
+        <CardContent className="overflow-x-auto px-0">
           {sales.length > 0 ? (
-            <table className="w-full border-collapse text-sm sm:text-base">
+            <table className="w-full text-left border-collapse text-sm sm:text-base">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
-                  <th className="py-2">Date</th>
-                  <th className="py-2">Product</th>
-                  <th className="py-2">Quantity</th>
-                  <th className="py-2">Total</th>
-                  <th className="py-2 text-right">Actions</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Product</th>
+                  <th className="py-3 px-4">Quantity</th>
+                  <th className="py-3 px-4">Total</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {sales.map((sale) => (
                   <tr key={sale.id} className="border-b border-gray-100">
-                    <td className="py-2">{new Date(sale.sale_date).toLocaleDateString()}</td>
-                    <td className="py-2">{sale.products?.product_name || "N/A"}</td>
-                    <td className="py-2">{sale.quantity_sold}</td>
-                    <td className="py-2">{formatCurrency(sale.total_price)}</td>
-                    <td className="py-2 text-right">
+                    <td className="py-3 px-4">
+                      {new Date(sale.sale_date).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-4">{sale.products?.product_name || "N/A"}</td>
+                    <td className="py-3 px-4">{sale.quantity_sold}</td>
+                    <td className="py-3 px-4">{formatCurrency(sale.total_price)}</td>
+                    <td className="py-3 px-4 text-right">
                       <Button
                         variant="destructive"
                         size="sm"
