@@ -49,10 +49,7 @@ export default function Categories() {
   // ✅ Edit category
   const editCategoryMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { error } = await supabase
-        .from("categories")
-        .update({ name })
-        .eq("id", id);
+      const { error } = await supabase.from("categories").update({ name }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -77,87 +74,87 @@ export default function Categories() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-2 sm:px-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100">
             Categories
           </h1>
-          <p className="text-gray-500">
+          <p className="text-gray-500 text-sm sm:text-base">
             Organize your products into clean, structured categories
           </p>
         </div>
-        <Button onClick={() => setShowAdd(true)}>
+        <Button onClick={() => setShowAdd(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Category
         </Button>
       </div>
 
       {/* Summary */}
-      <div className="grid sm:grid-cols-3 gap-6">
-        <Card className="p-6">
-          <h3 className="text-sm text-gray-500 font-medium">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <Card className="p-4 sm:p-6 rounded-xl shadow-md flex flex-col items-center justify-center">
+          <h3 className="text-xs sm:text-sm text-gray-500 font-medium">
             Total Categories
           </h3>
-          <p className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+          <p className="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
             {categories.length}
           </p>
         </Card>
       </div>
 
       {/* Categories Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow border border-gray-200 dark:border-gray-800 p-4">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="py-3 px-4 text-sm font-semibold">Category</th>
-              <th className="py-3 px-4 text-sm font-semibold text-right">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((cat: any) => (
-              <tr
-                key={cat.id}
-                className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-              >
-                <td className="py-3 px-4">{cat.name}</td>
-                <td className="py-3 px-4 text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                      setShowEdit(true);
-                    }}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => deleteCategoryMutation.mutate(cat.id)}
-                    disabled={deleteCategoryMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </td>
+      <Card className="shadow-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-sm sm:text-base">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="py-3 px-4 font-semibold">Category</th>
+                <th className="py-3 px-4 text-right font-semibold">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {categories.map((cat: any) => (
+                <tr
+                  key={cat.id}
+                  className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                >
+                  <td className="py-3 px-4">{cat.name}</td>
+                  <td className="py-3 px-4 text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setShowEdit(true);
+                      }}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => deleteCategoryMutation.mutate(cat.id)}
+                      disabled={deleteCategoryMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {categories.length === 0 && (
-          <p className="text-center text-gray-500 py-6">
+          <p className="text-center text-gray-500 py-6 text-sm sm:text-base">
             No categories yet. Add one to get started.
           </p>
         )}
-      </div>
+      </Card>
 
       {/* Add Category Modal */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
           <DialogHeader>
             <DialogTitle>Add Category</DialogTitle>
           </DialogHeader>
@@ -169,15 +166,15 @@ export default function Categories() {
               addCategoryMutation.mutate(name);
               form.reset();
             }}
-            className="space-y-4"
+            className="space-y-4 py-2"
           >
             <div>
               <label className="block text-sm font-medium mb-1">Name</label>
-              <Input name="name" type="text" required />
+              <Input name="name" type="text" required className="text-base py-2" />
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full py-3 text-base"
               disabled={addCategoryMutation.isPending}
             >
               {addCategoryMutation.isPending ? "Saving..." : "Save Category"}
@@ -188,7 +185,7 @@ export default function Categories() {
 
       {/* Edit Category Modal */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
           </DialogHeader>
@@ -203,7 +200,7 @@ export default function Categories() {
                   name,
                 });
               }}
-              className="space-y-4"
+              className="space-y-4 py-2"
             >
               <div>
                 <label className="block text-sm font-medium mb-1">Name</label>
@@ -212,16 +209,15 @@ export default function Categories() {
                   type="text"
                   defaultValue={selectedCategory.name}
                   required
+                  className="text-base py-2"
                 />
               </div>
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full py-3 text-base"
                 disabled={editCategoryMutation.isPending}
               >
-                {editCategoryMutation.isPending
-                  ? "Updating..."
-                  : "Update Category"}
+                {editCategoryMutation.isPending ? "Updating..." : "Update Category"}
               </Button>
             </form>
           )}

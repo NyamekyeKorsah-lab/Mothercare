@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,6 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // Form states
   const [productName, setProductName] = useState("");
   const [quantity, setQuantity] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
@@ -58,7 +57,7 @@ const Products = () => {
     },
   });
 
-  // ✅ Fetch categories for dropdown
+  // ✅ Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -71,7 +70,7 @@ const Products = () => {
     },
   });
 
-  // ✅ Add new product
+  // ✅ Add Product
   const addProductMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("products").insert([
@@ -90,12 +89,10 @@ const Products = () => {
       toast.success("✅ Product added successfully!");
       resetForm();
     },
-    onError: (err: any) => {
-      toast.error("❌ Failed to add product: " + err.message);
-    },
+    onError: (err: any) => toast.error("❌ Failed to add product: " + err.message),
   });
 
-  // ✅ Edit existing product
+  // ✅ Edit Product
   const editProductMutation = useMutation({
     mutationFn: async () => {
       if (!editingProduct) return;
@@ -116,12 +113,10 @@ const Products = () => {
       toast.success("✏️ Product updated successfully!");
       resetForm();
     },
-    onError: (err: any) => {
-      toast.error("❌ Failed to update product: " + err.message);
-    },
+    onError: (err: any) => toast.error("❌ Failed to update product: " + err.message),
   });
 
-  // ✅ Delete product
+  // ✅ Delete Product
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("products").delete().eq("id", id);
@@ -131,9 +126,7 @@ const Products = () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("🗑️ Product deleted successfully");
     },
-    onError: () => {
-      toast.error("❌ Failed to delete product");
-    },
+    onError: () => toast.error("❌ Failed to delete product"),
   });
 
   const resetForm = () => {
@@ -157,48 +150,41 @@ const Products = () => {
     setEditOpen(true);
   };
 
-  const filteredProducts = products?.filter((product) =>
-    product.product_name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = products?.filter((p) =>
+    p.product_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 px-2 sm:px-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-semibold">Products</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold">Products</h1>
+          <p className="text-muted-foreground text-sm sm:text-base mt-1">
             Manage your product inventory 📦
           </p>
         </div>
-
-        {/* ✅ Add Product Dialog */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" /> Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3">
+            <div className="space-y-3 py-2">
               <Label>Product Name</Label>
-              <Input
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-              />
+              <Input value={productName} onChange={(e) => setProductName(e.target.value)} />
 
               <Label>Category</Label>
-              <Select
-                value={categoryId}
-                onValueChange={(val) => setCategoryId(val)}
-              >
+              <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.length > 0 ? (
+                  {categories.length ? (
                     categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         {cat.name}
@@ -213,18 +199,10 @@ const Products = () => {
               </Select>
 
               <Label>Quantity</Label>
-              <Input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
+              <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
 
               <Label>Unit Price (₵)</Label>
-              <Input
-                type="number"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
-              />
+              <Input type="number" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />
 
               <Label>Reorder Level</Label>
               <Input
@@ -238,9 +216,7 @@ const Products = () => {
                 onClick={() => addProductMutation.mutate()}
                 disabled={addProductMutation.isPending}
               >
-                {addProductMutation.isPending
-                  ? "Saving..."
-                  : "Save Product"}
+                {addProductMutation.isPending ? "Saving..." : "Save Product"}
               </Button>
             </div>
           </DialogContent>
@@ -250,77 +226,71 @@ const Products = () => {
       {/* ✅ Products Table */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>Product List</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Product List</CardTitle>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products..."
-              className="pl-10"
+              className="pl-10 text-sm sm:text-base"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </CardHeader>
 
-        <CardContent>
-          {filteredProducts && filteredProducts.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.product_name}</TableCell>
-                    <TableCell>
-                      {product.categories?.name || "—"}
-                    </TableCell>
-                    <TableCell>{product.quantity}</TableCell>
-                    <TableCell>
-                      ₵{product.unit_price.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      {product.quantity <= product.reorder_level ? (
-                        <Badge variant="destructive">Low Stock</Badge>
-                      ) : (
-                        <Badge className="bg-green-500 text-white">
-                          In Stock
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditClick(product)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            deleteMutation.mutate(product.id)
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+        <CardContent className="overflow-x-auto">
+          {filteredProducts?.length ? (
+            <div className="min-w-[700px] sm:min-w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>{product.product_name}</TableCell>
+                      <TableCell>{product.categories?.name || "—"}</TableCell>
+                      <TableCell>{product.quantity}</TableCell>
+                      <TableCell>₵{product.unit_price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {product.quantity <= product.reorder_level ? (
+                          <Badge variant="destructive">Low Stock</Badge>
+                        ) : (
+                          <Badge className="bg-green-500 text-white">In Stock</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditClick(product)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteMutation.mutate(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
               No products found. Add your first product to get started!
             </div>
           )}

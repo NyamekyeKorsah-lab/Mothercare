@@ -12,21 +12,15 @@ const Dashboard = () => {
   // ✅ Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
-      // Fetch products
-      const { data: prodData, error: prodError } = await supabase
-        .from("products")
-        .select("*");
-
+      const { data: prodData, error: prodError } = await supabase.from("products").select("*");
       if (prodError) throw prodError;
       setProducts(prodData || []);
 
-      // Fetch sales
       const { data: salesData, error: salesError } = await supabase
         .from("sales")
         .select("*")
         .order("sale_date", { ascending: false })
         .limit(10);
-
       if (salesError) throw salesError;
       setSales(salesData || []);
     } catch (err) {
@@ -34,12 +28,10 @@ const Dashboard = () => {
     }
   };
 
-  // ✅ Run once on mount
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
-  // ✅ Realtime updates
   useEffect(() => {
     const productChannel = supabase
       .channel("realtime-products")
@@ -73,22 +65,11 @@ const Dashboard = () => {
 
   // ✅ Calculations
   const totalProducts = products.length;
-  const totalStock = products.reduce(
-    (sum, p) => sum + (p.quantity || 0),
-    0
-  );
-  const lowStockItems = products.filter(
-    (p) => p.quantity <= (p.reorder_level || 0)
-  );
-
-  // ✅ Fixed: Use total_price, not total_amount
-  const totalRevenue = sales.reduce(
-    (sum, s) => sum + Number(s.total_price || 0),
-    0
-  );
+  const totalStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
+  const lowStockItems = products.filter((p) => p.quantity <= (p.reorder_level || 0));
+  const totalRevenue = sales.reduce((sum, s) => sum + Number(s.total_price || 0), 0);
   const totalSalesCount = sales.length;
 
-  // ✅ Currency formatter
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-GH", {
       style: "currency",
@@ -96,89 +77,87 @@ const Dashboard = () => {
     }).format(amount);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-2 sm:px-4">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-2xl sm:text-3xl font-semibold">Dashboard</h1>
+        <p className="text-muted-foreground text-sm sm:text-base mt-1">
           Overview of your inventory
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* ✅ Summary Cards — 3 to 4 cards per row on mobile */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
         {/* Total Products */}
-        <Card className="shadow-soft">
+        <Card className="p-3 sm:p-4 rounded-xl shadow-md h-full flex flex-col justify-center">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Total Products
             </CardTitle>
             <Package className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalProducts}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-xl sm:text-2xl font-bold">{totalProducts}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
               Active items in stock
             </p>
           </CardContent>
         </Card>
 
         {/* Total Stock */}
-        <Card className="shadow-soft">
+        <Card className="p-3 sm:p-4 rounded-xl shadow-md h-full flex flex-col justify-center">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Total Stock
             </CardTitle>
             <TrendingUp className="h-5 w-5 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{totalStock}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-xl sm:text-2xl font-bold">{totalStock}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
               Units available
             </p>
           </CardContent>
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card className="shadow-soft">
+        <Card className="p-3 sm:p-4 rounded-xl shadow-md h-full flex flex-col justify-center">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Low Stock Alerts
             </CardTitle>
             <AlertTriangle className="h-5 w-5 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{lowStockItems.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-xl sm:text-2xl font-bold">{lowStockItems.length}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
               Items need restock
             </p>
           </CardContent>
         </Card>
 
         {/* Total Sales */}
-        <Card className="shadow-soft">
+        <Card className="p-3 sm:p-4 rounded-xl shadow-md h-full flex flex-col justify-center">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Total Sales
             </CardTitle>
             <DollarSign className="h-5 w-5 text-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(totalRevenue)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-lg sm:text-xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
               {totalSalesCount} recorded sale{totalSalesCount !== 1 && "s"}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Low Stock Details */}
+      {/* ✅ Low Stock Details */}
       {lowStockItems.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               Low Stock Alerts
             </CardTitle>
@@ -188,15 +167,15 @@ const Dashboard = () => {
               {lowStockItems.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-muted/50"
                 >
                   <div>
-                    <p className="font-medium">{p.product_name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-medium text-sm sm:text-base">{p.product_name}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Reorder level: {p.reorder_level}
                     </p>
                   </div>
-                  <Badge variant="destructive">
+                  <Badge variant="destructive" className="self-start sm:self-center">
                     {p.quantity} / {p.reorder_level} units
                   </Badge>
                 </div>
@@ -206,30 +185,30 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {/* Recent Sales */}
+      {/* ✅ Recent Sales */}
       {sales.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Recent Sales</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Recent Sales</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {sales.map((sale) => (
                 <div
                   key={sale.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-muted/50"
                 >
                   <div>
-                    <p className="font-medium">{sale.product_name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-medium text-sm sm:text-base">{sale.product_name}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {new Date(sale.sale_date).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">
+                    <p className="font-medium text-sm sm:text-base">
                       {formatCurrency(Number(sale.total_price))}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {sale.quantity_sold} units
                     </p>
                   </div>
