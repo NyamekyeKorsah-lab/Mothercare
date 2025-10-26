@@ -15,19 +15,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -44,7 +37,7 @@ const Products = () => {
   const [reorderLevel, setReorderLevel] = useState<string>("5");
   const [categoryId, setCategoryId] = useState<string>("");
 
-  // ✅ Fetch products (join with categories)
+  // Fetch products (with categories)
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -57,7 +50,7 @@ const Products = () => {
     },
   });
 
-  // ✅ Fetch categories
+  // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -70,7 +63,7 @@ const Products = () => {
     },
   });
 
-  // ✅ Add Product
+  // Add Product
   const addProductMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("products").insert([
@@ -92,7 +85,7 @@ const Products = () => {
     onError: (err: any) => toast.error("❌ Failed to add product: " + err.message),
   });
 
-  // ✅ Edit Product
+  // Edit Product
   const editProductMutation = useMutation({
     mutationFn: async () => {
       if (!editingProduct) return;
@@ -116,7 +109,7 @@ const Products = () => {
     onError: (err: any) => toast.error("❌ Failed to update product: " + err.message),
   });
 
-  // ✅ Delete Product
+  // Delete Product
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("products").delete().eq("id", id);
@@ -155,30 +148,34 @@ const Products = () => {
   );
 
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 px-3 sm:px-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-2 sm:px-4 md:px-0">
-        <div className="text-left w-full">
-          <h1 className="text-2xl sm:text-3xl font-semibold">Products</h1>
-          <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            Manage your product inventory 📦
+      <div className="flex items-start justify-between flex-wrap sm:flex-nowrap">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Products</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-8 leading-snug break-words">
+            Manage your product inventory <br className="block sm:hidden" /> 📦
           </p>
         </div>
 
-        {/* Add Product */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 w-full sm:w-auto self-start sm:self-end">
+            <Button className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3 mt-1 sm:mt-0">
               <Plus className="h-4 w-4" /> Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[95vw] sm:max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
+
+          <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
             </DialogHeader>
+
             <div className="space-y-3 py-2">
               <Label>Product Name</Label>
-              <Input value={productName} onChange={(e) => setProductName(e.target.value)} />
+              <Input
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+              />
 
               <Label>Category</Label>
               <Select value={categoryId} onValueChange={setCategoryId}>
@@ -201,10 +198,18 @@ const Products = () => {
               </Select>
 
               <Label>Quantity</Label>
-              <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
 
               <Label>Unit Price (₵)</Label>
-              <Input type="number" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />
+              <Input
+                type="number"
+                value={unitPrice}
+                onChange={(e) => setUnitPrice(e.target.value)}
+              />
 
               <Label>Reorder Level</Label>
               <Input
@@ -214,7 +219,7 @@ const Products = () => {
               />
 
               <Button
-                className="w-full mt-2"
+                className="w-full mt-3"
                 onClick={() => addProductMutation.mutate()}
                 disabled={addProductMutation.isPending}
               >
@@ -225,9 +230,9 @@ const Products = () => {
         </Dialog>
       </div>
 
-      {/* ✅ Products Table */}
-      <Card className="shadow-card w-full px-1 sm:px-3 md:px-0">
-        <CardHeader className="px-2 sm:px-4">
+      {/* Products Table */}
+      <Card className="shadow-card">
+        <CardHeader>
           <CardTitle className="text-base sm:text-lg">Product List</CardTitle>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -240,34 +245,34 @@ const Products = () => {
           </div>
         </CardHeader>
 
-        <CardContent className="overflow-x-auto w-full">
+        <CardContent className="overflow-x-auto px-0">
           {filteredProducts?.length ? (
-            <table className="w-full border-collapse text-sm sm:text-base">
+            <table className="w-full text-left border-collapse text-sm sm:text-base">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
-                  <th className="py-2">Product</th>
-                  <th className="py-2">Category</th>
-                  <th className="py-2">Quantity</th>
-                  <th className="py-2">Price</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2 text-right">Actions</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="py-3 px-4">Product</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">Quantity</th>
+                  <th className="py-3 px-4">Price</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProducts.map((product) => (
                   <tr key={product.id} className="border-b border-gray-100">
-                    <td className="py-2">{product.product_name}</td>
-                    <td className="py-2">{product.categories?.name || "—"}</td>
-                    <td className="py-2">{product.quantity}</td>
-                    <td className="py-2 break-all whitespace-pre-wrap">₵{product.unit_price.toFixed(2)}</td>
-                    <td className="py-2">
+                    <td className="py-3 px-4">{product.product_name}</td>
+                    <td className="py-3 px-4">{product.categories?.name || "—"}</td>
+                    <td className="py-3 px-4">{product.quantity}</td>
+                    <td className="py-3 px-4">₵{product.unit_price.toFixed(2)}</td>
+                    <td className="py-3 px-4">
                       {product.quantity <= product.reorder_level ? (
                         <Badge variant="destructive">Low Stock</Badge>
                       ) : (
                         <Badge className="bg-green-500 text-white">In Stock</Badge>
                       )}
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-3 px-4 text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
