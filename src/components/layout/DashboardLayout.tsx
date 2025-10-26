@@ -48,7 +48,7 @@ export const DashboardLayout = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background relative">
-      {/* ✅ Sidebar with glass blur */}
+      {/* ✅ Sidebar */}
       <aside
         className={`fixed lg:static top-0 left-0 h-full w-64
         ${hydrated ? "bg-white/60 dark:bg-gray-900/40" : "bg-transparent"}
@@ -71,7 +71,7 @@ export const DashboardLayout = () => {
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* ✅ Header */}
         <header className="sticky top-0 z-30 bg-white/80 dark:bg-gray-900/60 backdrop-blur-xl border-b border-white/10 shadow-md transition-colors duration-300">
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -81,7 +81,6 @@ export const DashboardLayout = () => {
               >
                 <Menu className="h-6 w-6 text-gray-700 dark:text-gray-300" />
               </Button>
-              {/* ✅ Dynamic Page Title */}
               <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100 capitalize">
                 {getPageTitle()}
               </h1>
@@ -93,8 +92,15 @@ export const DashboardLayout = () => {
         </header>
 
         {/* ✅ Page content */}
-        <main className="flex-1 overflow-y-auto bg-background px-6 pt-6 pb-6 transition-all duration-300">
-          <div className="container mx-auto">
+        <main
+          className="
+            flex-1 overflow-y-auto bg-background 
+            px-2 sm:px-4 md:px-6 pt-4 sm:pt-6 pb-6 
+            transition-all duration-300
+          "
+        >
+          {/* ✅ Adjust container width only for small screens */}
+          <div className="w-full max-w-full sm:max-w-screen-md md:max-w-screen-lg lg:max-w-screen-xl mx-auto">
             <Outlet />
           </div>
         </main>
