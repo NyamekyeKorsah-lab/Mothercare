@@ -114,11 +114,11 @@ const Sales = () => {
   return (
     <div className="space-y-6 px-3 sm:px-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between flex-wrap sm:flex-nowrap">
+        <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Sales</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-6">
-            Manage customer sales, invoices, and transactions
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-8 leading-snug break-words">
+            Manage customer sales,<br className="block sm:hidden" /> invoices, and transactions
           </p>
         </div>
 
