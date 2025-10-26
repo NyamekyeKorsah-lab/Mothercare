@@ -155,22 +155,24 @@ const Products = () => {
   );
 
   return (
-    <div className="space-y-6 px-2 sm:px-4">
+    <div className="space-y-6 w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-        <div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-2 sm:px-4 md:px-0">
+        <div className="text-left w-full">
           <h1 className="text-2xl sm:text-3xl font-semibold">Products</h1>
           <p className="text-muted-foreground text-sm sm:text-base mt-1">
             Manage your product inventory 📦
           </p>
         </div>
+
+        {/* Add Product */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 w-full sm:w-auto">
+            <Button className="gap-2 w-full sm:w-auto self-start sm:self-end">
               <Plus className="h-4 w-4" /> Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] sm:max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
             </DialogHeader>
@@ -224,9 +226,9 @@ const Products = () => {
       </div>
 
       {/* ✅ Products Table */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Product List</CardTitle>
+      <Card className="shadow-card w-full px-1 sm:px-3 md:px-0">
+        <CardHeader className="px-2 sm:px-4">
+          <CardTitle className="text-base sm:text-lg">Product List</CardTitle>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -238,57 +240,55 @@ const Products = () => {
           </div>
         </CardHeader>
 
-        <CardContent className="overflow-x-auto">
+        <CardContent className="overflow-x-auto w-full">
           {filteredProducts?.length ? (
-            <div className="min-w-[700px] sm:min-w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell>{product.product_name}</TableCell>
-                      <TableCell>{product.categories?.name || "—"}</TableCell>
-                      <TableCell>{product.quantity}</TableCell>
-                      <TableCell>₵{product.unit_price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        {product.quantity <= product.reorder_level ? (
-                          <Badge variant="destructive">Low Stock</Badge>
-                        ) : (
-                          <Badge className="bg-green-500 text-white">In Stock</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditClick(product)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteMutation.mutate(product.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <table className="w-full border-collapse text-sm sm:text-base">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
+                  <th className="py-2">Product</th>
+                  <th className="py-2">Category</th>
+                  <th className="py-2">Quantity</th>
+                  <th className="py-2">Price</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="border-b border-gray-100">
+                    <td className="py-2">{product.product_name}</td>
+                    <td className="py-2">{product.categories?.name || "—"}</td>
+                    <td className="py-2">{product.quantity}</td>
+                    <td className="py-2 break-all whitespace-pre-wrap">₵{product.unit_price.toFixed(2)}</td>
+                    <td className="py-2">
+                      {product.quantity <= product.reorder_level ? (
+                        <Badge variant="destructive">Low Stock</Badge>
+                      ) : (
+                        <Badge className="bg-green-500 text-white">In Stock</Badge>
+                      )}
+                    </td>
+                    <td className="py-2 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditClick(product)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteMutation.mutate(product.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
             <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
               No products found. Add your first product to get started!

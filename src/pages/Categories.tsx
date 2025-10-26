@@ -19,7 +19,7 @@ export default function Categories() {
   const [showEdit, setShowEdit] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
 
-  // ✅ Fetch categories from Supabase
+  // ✅ Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -74,10 +74,10 @@ export default function Categories() {
   });
 
   return (
-    <div className="space-y-8 px-2 sm:px-4">
+    <div className="space-y-8 w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-2 sm:px-4 md:px-0">
+        <div className="text-left w-full">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800 dark:text-gray-100">
             Categories
           </h1>
@@ -85,17 +85,15 @@ export default function Categories() {
             Organize your products into clean, structured categories
           </p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="w-full sm:w-auto">
+        <Button onClick={() => setShowAdd(true)} className="w-full sm:w-auto self-start sm:self-end">
           <Plus className="mr-2 h-4 w-4" /> Add Category
         </Button>
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Card className="p-4 sm:p-6 rounded-xl shadow-md flex flex-col items-center justify-center">
-          <h3 className="text-xs sm:text-sm text-gray-500 font-medium">
-            Total Categories
-          </h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 px-2 sm:px-4 md:px-0">
+        <Card className="p-4 sm:p-6 rounded-xl shadow-sm flex flex-col items-center justify-center w-full">
+          <h3 className="text-xs sm:text-sm text-gray-500 font-medium">Total Categories</h3>
           <p className="text-xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
             {categories.length}
           </p>
@@ -103,13 +101,13 @@ export default function Categories() {
       </div>
 
       {/* Categories Table */}
-      <Card className="shadow-card">
-        <div className="overflow-x-auto">
+      <Card className="shadow-card w-full px-1 sm:px-3 md:px-0">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse text-sm sm:text-base">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="py-3 px-4 font-semibold">Category</th>
-                <th className="py-3 px-4 text-right font-semibold">Actions</th>
+                <th className="py-3 px-2 sm:px-4 font-semibold">Category</th>
+                <th className="py-3 px-2 sm:px-4 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -118,8 +116,8 @@ export default function Categories() {
                   key={cat.id}
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 >
-                  <td className="py-3 px-4">{cat.name}</td>
-                  <td className="py-3 px-4 text-right space-x-2">
+                  <td className="py-3 px-2 sm:px-4 break-words">{cat.name}</td>
+                  <td className="py-3 px-2 sm:px-4 text-right space-x-2">
                     <Button
                       variant="outline"
                       size="icon"
