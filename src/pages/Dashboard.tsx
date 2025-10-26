@@ -30,9 +30,16 @@ const Dashboard = () => {
   });
 
   const totalStock = products?.reduce((sum, p) => sum + p.quantity, 0) || 0;
-  const lowStockItems = products?.filter(p => p.quantity <= p.reorder_level) || [];
+  const lowStockItems = products?.filter((p) => p.quantity <= p.reorder_level) || [];
   const totalSales = sales?.reduce((sum, s) => sum + Number(s.total_amount), 0) || 0;
   const totalProducts = products?.length || 0;
+
+  // Ghanaian currency formatter
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-GH", {
+      style: "currency",
+      currency: "GHS",
+    }).format(amount);
 
   return (
     <div className="space-y-6">
@@ -95,7 +102,9 @@ const Dashboard = () => {
             <DollarSign className="h-5 w-5 text-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${totalSales.toFixed(2)}</div>
+            <div className="text-3xl font-bold">
+              {formatCurrency(totalSales)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               Revenue generated
             </p>
@@ -153,7 +162,9 @@ const Dashboard = () => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">${Number(sale.total_amount).toFixed(2)}</p>
+                    <p className="font-medium">
+                      {formatCurrency(Number(sale.total_amount))}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {sale.quantity_sold} units
                     </p>
