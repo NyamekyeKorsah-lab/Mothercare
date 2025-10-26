@@ -63,7 +63,7 @@ const Dashboard = () => {
   return (
     <div className="w-full px-2 sm:px-4 md:px-6 space-y-5 max-w-screen-xl mx-auto">
       {/* Header */}
-      <div className="text-left">
+      <div className="text-left ml-1 sm:ml-2 md:ml-0">
         <h1 className="text-2xl sm:text-3xl font-semibold leading-tight">
           Dashboard
         </h1>
@@ -102,15 +102,15 @@ const Dashboard = () => {
         ].map((item, i) => (
           <Card
             key={i}
-            className="flex flex-col justify-center items-center p-2 sm:p-4 rounded-xl shadow-sm w-full"
+            className="flex flex-col justify-center items-start sm:items-center p-3 sm:p-4 rounded-xl shadow-sm w-full overflow-hidden"
           >
-            <CardHeader className="flex flex-col items-center justify-center space-y-1 p-0 text-center">
+            <CardHeader className="flex flex-col items-start sm:items-center justify-center space-y-1 p-0 text-left sm:text-center w-full">
               <CardTitle className="text-[11px] sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
                 {item.title} {item.icon}
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-center p-0 mt-1 flex flex-col justify-center items-center">
-              <div className="font-bold text-lg sm:text-xl md:text-2xl leading-tight break-words text-balance">
+            <CardContent className="text-left sm:text-center p-0 mt-1 flex flex-col justify-center items-start sm:items-center w-full">
+              <div className="font-bold text-lg sm:text-xl md:text-2xl leading-tight break-words text-balance w-full truncate">
                 {item.value}
               </div>
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
@@ -123,7 +123,7 @@ const Dashboard = () => {
 
       {/* Low Stock Alerts */}
       {lowStockItems.length > 0 && (
-        <Card className="shadow-sm w-full">
+        <Card className="shadow-sm w-full sm:w-[98%] ml-1 sm:ml-2 md:ml-0">
           <CardHeader className="px-3 sm:px-4">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
               <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -153,7 +153,7 @@ const Dashboard = () => {
 
       {/* Recent Sales */}
       {sales.length > 0 && (
-        <Card className="shadow-sm w-full">
+        <Card className="shadow-sm w-full sm:w-[98%] ml-1 sm:ml-2 md:ml-0">
           <CardHeader className="px-3 sm:px-4">
             <CardTitle className="text-sm sm:text-base font-semibold">
               Recent Sales
@@ -172,7 +172,7 @@ const Dashboard = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-sm sm:text-base break-words">
+                  <p className="font-medium text-sm sm:text-base break-words truncate max-w-[80px] sm:max-w-none">
                     {formatCurrency(Number(sale.total_price))}
                   </p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
