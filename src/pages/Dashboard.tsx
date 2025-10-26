@@ -15,7 +15,7 @@ const Dashboard = () => {
       // Fetch products
       const { data: prodData, error: prodError } = await supabase
         .from("products")
-        .select("*"); // simplified query, no joins
+        .select("*");
 
       if (prodError) throw prodError;
       setProducts(prodData || []);
@@ -80,10 +80,13 @@ const Dashboard = () => {
   const lowStockItems = products.filter(
     (p) => p.quantity <= (p.reorder_level || 0)
   );
-  const totalSales = sales.reduce(
-    (sum, s) => sum + Number(s.total_amount || 0),
+
+  // ✅ Fixed: Use total_price, not total_amount
+  const totalRevenue = sales.reduce(
+    (sum, s) => sum + Number(s.total_price || 0),
     0
   );
+  const totalSalesCount = sales.length;
 
   // ✅ Currency formatter
   const formatCurrency = (amount: number) =>
@@ -162,10 +165,10 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {formatCurrency(totalSales)}
+              {formatCurrency(totalRevenue)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Revenue generated
+              {totalSalesCount} recorded sale{totalSalesCount !== 1 && "s"}
             </p>
           </CardContent>
         </Card>
@@ -224,7 +227,7 @@ const Dashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      {formatCurrency(Number(sale.total_amount))}
+                      {formatCurrency(Number(sale.total_price))}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {sale.quantity_sold} units

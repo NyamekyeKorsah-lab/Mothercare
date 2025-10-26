@@ -1,19 +1,17 @@
-import { useState, useRef } from "react";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -25,16 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -45,58 +33,54 @@ import { Label } from "@/components/ui/label";
 
 const Products = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // form states
+  // Form states
   const [productName, setProductName] = useState("");
   const [quantity, setQuantity] = useState<string>("");
   const [unitPrice, setUnitPrice] = useState<string>("");
   const [reorderLevel, setReorderLevel] = useState<string>("5");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [categoryId, setCategoryId] = useState<string>("");
 
-  // fetch products
-  const { data: products, isLoading } = useQuery({
+  // ✅ Fetch products (join with categories)
+  const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select("*, categories:category_id(name)")
         .order("product_name");
       if (error) throw error;
       return data;
     },
   });
 
-  // add product
+  // ✅ Fetch categories for dropdown
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // ✅ Add new product
   const addProductMutation = useMutation({
     mutationFn: async () => {
-      let imageUrl: string | null = null;
-      if (imageFile) {
-        const ext = imageFile.name.split(".").pop();
-        const fileName = `products/${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("product-images")
-          .upload(fileName, imageFile);
-        if (uploadError) throw uploadError;
-        const { data: publicData } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(fileName);
-        imageUrl = publicData.publicUrl;
-      }
-
       const { error } = await supabase.from("products").insert([
         {
           product_name: productName,
           quantity: Number(quantity) || 0,
           unit_price: Number(unitPrice) || 0,
           reorder_level: Number(reorderLevel) || 0,
-          image_url: imageUrl,
+          category_id: categoryId || null,
         },
       ]);
       if (error) throw error;
@@ -104,39 +88,17 @@ const Products = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("✅ Product added successfully!");
-      setOpen(false);
-      setProductName("");
-      setQuantity("");
-      setUnitPrice("");
-      setReorderLevel("5");
-      setImageFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      resetForm();
     },
     onError: (err: any) => {
       toast.error("❌ Failed to add product: " + err.message);
     },
   });
 
-  // edit product
+  // ✅ Edit existing product
   const editProductMutation = useMutation({
     mutationFn: async () => {
       if (!editingProduct) return;
-
-      let imageUrl = editingProduct.image_url;
-
-      if (imageFile) {
-        const ext = imageFile.name.split(".").pop();
-        const fileName = `products/${Date.now()}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("product-images")
-          .upload(fileName, imageFile);
-        if (uploadError) throw uploadError;
-        const { data: publicData } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(fileName);
-        imageUrl = publicData.publicUrl;
-      }
-
       const { error } = await supabase
         .from("products")
         .update({
@@ -144,30 +106,22 @@ const Products = () => {
           quantity: Number(quantity),
           unit_price: Number(unitPrice),
           reorder_level: Number(reorderLevel),
-          image_url: imageUrl,
+          category_id: categoryId || null,
         })
         .eq("id", editingProduct.id);
-
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("✏️ Product updated successfully!");
-      setEditOpen(false);
-      setEditingProduct(null);
-      setProductName("");
-      setQuantity("");
-      setUnitPrice("");
-      setReorderLevel("5");
-      setImageFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      resetForm();
     },
     onError: (err: any) => {
       toast.error("❌ Failed to update product: " + err.message);
     },
   });
 
-  // delete product
+  // ✅ Delete product
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("products").delete().eq("id", id);
@@ -176,12 +130,22 @@ const Products = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("🗑️ Product deleted successfully");
-      setDeleteId(null);
     },
     onError: () => {
       toast.error("❌ Failed to delete product");
     },
   });
+
+  const resetForm = () => {
+    setOpen(false);
+    setEditOpen(false);
+    setEditingProduct(null);
+    setProductName("");
+    setQuantity("");
+    setUnitPrice("");
+    setReorderLevel("5");
+    setCategoryId("");
+  };
 
   const handleEditClick = (product: any) => {
     setEditingProduct(product);
@@ -189,7 +153,7 @@ const Products = () => {
     setQuantity(String(product.quantity));
     setUnitPrice(String(product.unit_price));
     setReorderLevel(String(product.reorder_level));
-    setImageFile(null);
+    setCategoryId(product.category_id || "");
     setEditOpen(true);
   };
 
@@ -203,16 +167,15 @@ const Products = () => {
         <div>
           <h1 className="text-3xl font-semibold">Products</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your product inventory with pictures 📦
+            Manage your product inventory 📦
           </p>
         </div>
 
-        {/* Add Product Dialog */}
+        {/* ✅ Add Product Dialog */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Product
+              <Plus className="h-4 w-4" /> Add Product
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
@@ -226,13 +189,34 @@ const Products = () => {
                 onChange={(e) => setProductName(e.target.value)}
               />
 
+              <Label>Category</Label>
+              <Select
+                value={categoryId}
+                onValueChange={(val) => setCategoryId(val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.length > 0 ? (
+                    categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>
+                      No categories available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+
               <Label>Quantity</Label>
               <Input
                 type="number"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Enter quantity"
-                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
 
               <Label>Unit Price (₵)</Label>
@@ -240,8 +224,6 @@ const Products = () => {
                 type="number"
                 value={unitPrice}
                 onChange={(e) => setUnitPrice(e.target.value)}
-                placeholder="Enter unit price"
-                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
 
               <Label>Reorder Level</Label>
@@ -249,16 +231,6 @@ const Products = () => {
                 type="number"
                 value={reorderLevel}
                 onChange={(e) => setReorderLevel(e.target.value)}
-                placeholder="Enter reorder level"
-                className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-
-              <Label>Upload Image</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                ref={fileInputRef}
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
               />
 
               <Button
@@ -266,14 +238,16 @@ const Products = () => {
                 onClick={() => addProductMutation.mutate()}
                 disabled={addProductMutation.isPending}
               >
-                {addProductMutation.isPending ? "Saving..." : "Save Product"}
+                {addProductMutation.isPending
+                  ? "Saving..."
+                  : "Save Product"}
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Products Table */}
+      {/* ✅ Products Table */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle>Product List</CardTitle>
@@ -289,16 +263,12 @@ const Products = () => {
         </CardHeader>
 
         <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading products...
-            </div>
-          ) : filteredProducts && filteredProducts.length > 0 ? (
+          {filteredProducts && filteredProducts.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Image</TableHead>
                   <TableHead>Product Name</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
@@ -308,31 +278,14 @@ const Products = () => {
               <TableBody>
                 {filteredProducts.map((product) => (
                   <TableRow key={product.id}>
+                    <TableCell>{product.product_name}</TableCell>
                     <TableCell>
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.product_name}
-                          className="h-16 w-16 rounded-md object-cover border border-gray-300 cursor-pointer hover:scale-110 transition-transform duration-200"
-                          onClick={() => setImagePreview(product.image_url)}
-                        />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {product.product_name}
+                      {product.categories?.name || "—"}
                     </TableCell>
                     <TableCell>{product.quantity}</TableCell>
-
-                    {/* Ghanaian Cedis currency formatting */}
                     <TableCell>
-                      {new Intl.NumberFormat("en-GH", {
-                        style: "currency",
-                        currency: "GHS",
-                      }).format(product.unit_price)}
+                      ₵{product.unit_price.toFixed(2)}
                     </TableCell>
-
                     <TableCell>
                       {product.quantity <= product.reorder_level ? (
                         <Badge variant="destructive">Low Stock</Badge>
@@ -354,7 +307,9 @@ const Products = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setDeleteId(product.id)}
+                          onClick={() =>
+                            deleteMutation.mutate(product.id)
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -371,100 +326,6 @@ const Products = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              product.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-              className="bg-destructive text-destructive-foreground"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Image Preview */}
-      <Dialog open={!!imagePreview} onOpenChange={() => setImagePreview(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Product Image</DialogTitle>
-          </DialogHeader>
-          {imagePreview && (
-            <img
-              src={imagePreview}
-              alt="Full Product"
-              className="w-full h-auto rounded-md object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Modal */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label>Product Name</Label>
-            <Input
-              value={productName}
-              onChange={(e) => setProductName(e.target.value)}
-            />
-
-            <Label>Quantity</Label>
-            <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-
-            <Label>Unit Price (₵)</Label>
-            <Input
-              type="number"
-              value={unitPrice}
-              onChange={(e) => setUnitPrice(e.target.value)}
-              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-
-            <Label>Reorder Level</Label>
-            <Input
-              type="number"
-              value={reorderLevel}
-              onChange={(e) => setReorderLevel(e.target.value)}
-              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-
-            <Label>Change Image (optional)</Label>
-            <Input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-            />
-
-            <Button
-              className="w-full mt-2"
-              onClick={() => editProductMutation.mutate()}
-              disabled={editProductMutation.isPending}
-            >
-              {editProductMutation.isPending ? "Updating..." : "Save Changes"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

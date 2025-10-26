@@ -5,9 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
+import Sales from "./pages/Sales";
+import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,14 +23,30 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* Auth Page */}
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-            <Route path="/products" element={<DashboardLayout><Products /></DashboardLayout>} />
-            <Route path="/categories" element={<DashboardLayout><div className="text-center py-12"><h2 className="text-2xl font-semibold">Categories</h2><p className="text-muted-foreground mt-2">Coming soon</p></div></DashboardLayout>} />
-            <Route path="/suppliers" element={<DashboardLayout><div className="text-center py-12"><h2 className="text-2xl font-semibold">Suppliers</h2><p className="text-muted-foreground mt-2">Coming soon</p></div></DashboardLayout>} />
-            <Route path="/sales" element={<DashboardLayout><div className="text-center py-12"><h2 className="text-2xl font-semibold">Sales</h2><p className="text-muted-foreground mt-2">Coming soon</p></div></DashboardLayout>} />
-            <Route path="/reports" element={<DashboardLayout><div className="text-center py-12"><h2 className="text-2xl font-semibold">Reports</h2><p className="text-muted-foreground mt-2">Coming soon</p></div></DashboardLayout>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+            {/* Dashboard Layout — wraps all app pages */}
+            <Route element={<DashboardLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="products" element={<Products />} />
+              <Route path="categories" element={<Categories />} />
+              <Route path="suppliers" element={
+                <div className="text-center py-12">
+                  <h2 className="text-2xl font-semibold">Suppliers</h2>
+                  <p className="text-muted-foreground mt-2">Coming soon</p>
+                </div>
+              } />
+              <Route path="sales" element={<Sales />} />
+              <Route path="reports" element={
+                <div className="text-center py-12">
+                  <h2 className="text-2xl font-semibold">Reports</h2>
+                  <p className="text-muted-foreground mt-2">Coming soon</p>
+                </div>
+              } />
+            </Route>
+
+            {/* 404 Fallback */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
