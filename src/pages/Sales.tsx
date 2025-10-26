@@ -117,7 +117,7 @@ const Sales = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Sales</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-3">
             Manage customer sales, invoices, and transactions
           </p>
         </div>
@@ -125,7 +125,7 @@ const Sales = () => {
         {/* Add Sale Button */}
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3">
+            <Button className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3 mt-2 sm:mt-0">
               <Plus className="h-4 w-4" /> Add Sale
             </Button>
           </DialogTrigger>
@@ -193,48 +193,24 @@ const Sales = () => {
         </Dialog>
       </div>
 
-      {/* Cards Section */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Card className="p-3 sm:p-4 rounded-xl shadow-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              Total Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg sm:text-2xl font-bold break-words">
-              {formatCurrency(totalRevenue)}
-            </p>
-            <p className="text-[11px] sm:text-xs text-muted-foreground">
-              {totalSales} sales total
-            </p>
-          </CardContent>
+      {/* Dashboard-style Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Card className="rounded-xl shadow-md text-center flex flex-col justify-center p-4 sm:p-5">
+          <CardTitle className="text-sm text-muted-foreground mb-1">Total Revenue</CardTitle>
+          <p className="text-2xl font-semibold">{formatCurrency(totalRevenue)}</p>
+          <p className="text-xs text-muted-foreground mt-1">{totalSales} sales total</p>
         </Card>
 
-        <Card className="p-3 sm:p-4 rounded-xl shadow-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              Total Sales
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg sm:text-2xl font-bold">{totalSales}</p>
-            <p className="text-[11px] sm:text-xs text-muted-foreground">Recorded sales</p>
-          </CardContent>
+        <Card className="rounded-xl shadow-md text-center flex flex-col justify-center p-4 sm:p-5">
+          <CardTitle className="text-sm text-muted-foreground mb-1">Total Sales</CardTitle>
+          <p className="text-2xl font-semibold">{totalSales}</p>
+          <p className="text-xs text-muted-foreground mt-1">Recorded sales</p>
         </Card>
 
-        <Card className="p-3 sm:p-4 rounded-xl shadow-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              Average Sale
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg sm:text-2xl font-bold break-words">
-              {formatCurrency(averageSale)}
-            </p>
-            <p className="text-[11px] sm:text-xs text-muted-foreground">Per transaction</p>
-          </CardContent>
+        <Card className="rounded-xl shadow-md text-center flex flex-col justify-center p-4 sm:p-5 col-span-2 sm:col-span-1">
+          <CardTitle className="text-sm text-muted-foreground mb-1">Average Sale</CardTitle>
+          <p className="text-2xl font-semibold">{formatCurrency(averageSale)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Per transaction</p>
         </Card>
       </div>
 
