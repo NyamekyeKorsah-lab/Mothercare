@@ -1,18 +1,17 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { VariantProps, cva } from "class-variance-authority";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, Menu } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Constants
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
@@ -34,15 +33,10 @@ const SidebarContext = React.createContext<SidebarContext | null>(null);
 
 function useSidebar() {
   const context = React.useContext(SidebarContext);
-  if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
-  }
+  if (!context) throw new Error("useSidebar must be used within a SidebarProvider.");
   return context;
 }
 
-// =============================
-// PROVIDER
-// =============================
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
@@ -59,11 +53,8 @@ const SidebarProvider = React.forwardRef<
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
-      if (setOpenProp) {
-        setOpenProp(openState);
-      } else {
-        _setOpen(openState);
-      }
+      if (setOpenProp) setOpenProp(openState);
+      else _setOpen(openState);
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
     [setOpenProp, open]
@@ -122,164 +113,45 @@ const SidebarProvider = React.forwardRef<
 });
 SidebarProvider.displayName = "SidebarProvider";
 
-// =============================
-// SIDEBAR
-// =============================
 const Sidebar = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> & {
-    side?: "left" | "right";
-    variant?: "sidebar" | "floating" | "inset";
-    collapsible?: "offcanvas" | "icon" | "none";
-  }
+  React.ComponentProps<"div"> & { side?: "left" | "right"; variant?: "sidebar" | "floating" | "inset"; collapsible?: "offcanvas" | "icon" | "none" }
 >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, ...props }, ref) => {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, openMobile, setOpenMobile } = useSidebar();
 
   if (isMobile) {
     return (
-      <>
-        <Sheet open={openMobile} onOpenChange={setOpenMobile}>
-          <SheetContent
-            data-sidebar="sidebar"
-            data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-              } as React.CSSProperties
-            }
-            side={side}
-          >
-            <div className="flex h-full w-full flex-col">
-              {React.Children.map(children, (child) =>
-                React.isValidElement(child)
-                  ? React.cloneElement(child as React.ReactElement, {
-                      onClick: () => setOpenMobile(false),
-                    })
-                  : child
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+      <Sheet open={openMobile} onOpenChange={setOpenMobile}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="md:hidden fixed top-3 left-3 z-50">
+            <Menu className="h-6 w-6" />
+          </Button>
+        </SheetTrigger>
 
-        {/* Dark overlay */}
-        {openMobile && (
-          <div
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden"
-            onClick={() => setOpenMobile(false)}
-          />
-        )}
-      </>
+        <SheetContent
+          side={side}
+          className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground"
+          style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE } as React.CSSProperties}
+        >
+          <div className="flex h-full w-full flex-col">{children}</div>
+        </SheetContent>
+      </Sheet>
     );
   }
 
   return (
     <div
       ref={ref}
-      className="group peer hidden text-sidebar-foreground md:block"
-      data-state={state}
-      data-collapsible={state === "collapsed" ? collapsible : ""}
-      data-variant={variant}
-      data-side={side}
+      className={cn(
+        "hidden md:flex fixed inset-y-0 w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border z-40",
+        className
+      )}
+      {...props}
     >
-      <div
-        className={cn(
-          "fixed inset-y-0 z-10 h-svh w-[--sidebar-width] transition-all duration-200 ease-linear md:flex bg-sidebar text-sidebar-foreground",
-          side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:-left-[var(--sidebar-width)]"
-            : "right-0 group-data-[collapsible=offcanvas]:-right-[var(--sidebar-width)]",
-          className
-        )}
-        {...props}
-      >
-        <div className="flex h-full w-full flex-col">{children}</div>
-      </div>
+      {children}
     </div>
   );
 });
 Sidebar.displayName = "Sidebar";
 
-// =============================
-// SIDEBAR TRIGGER (Hamburger)
-// =============================
-const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.ComponentProps<typeof Button>>(
-  ({ className, onClick, ...props }, ref) => {
-    const { toggleSidebar } = useSidebar();
-
-    return (
-      <Button
-        ref={ref}
-        data-sidebar="trigger"
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "h-8 w-8 fixed top-4 left-4 z-50 md:hidden bg-white shadow-sm border hover:bg-gray-100 transition",
-          className
-        )}
-        onClick={(event) => {
-          onClick?.(event);
-          toggleSidebar();
-        }}
-        {...props}
-      >
-        <PanelLeft className="h-5 w-5" />
-        <span className="sr-only">Toggle Sidebar</span>
-      </Button>
-    );
-  }
-);
-SidebarTrigger.displayName = "SidebarTrigger";
-
-// =============================
-// SIMPLE COMPONENTS
-// =============================
-const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"main">>(({ className, ...props }, ref) => (
-  <main
-    ref={ref}
-    className={cn("relative flex min-h-svh flex-1 flex-col bg-background p-4 md:ml-[var(--sidebar-width)]", className)}
-    {...props}
-  />
-));
-SidebarInset.displayName = "SidebarInset";
-
-const SidebarContent = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex flex-col overflow-auto", className)} {...props} />
-  )
-);
-SidebarContent.displayName = "SidebarContent";
-
-const SidebarMenu = React.forwardRef<HTMLUListElement, React.ComponentProps<"ul">>(
-  ({ className, ...props }, ref) => (
-    <ul ref={ref} className={cn("flex flex-col gap-2 p-4", className)} {...props} />
-  )
-);
-SidebarMenu.displayName = "SidebarMenu";
-
-const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.ComponentProps<"li">>(
-  ({ className, ...props }, ref) => (
-    <li
-      ref={ref}
-      className={cn(
-        "rounded-md px-3 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer",
-        className
-      )}
-      {...props}
-    />
-  )
-);
-SidebarMenuItem.displayName = "SidebarMenuItem";
-
-// =============================
-// EXPORTS
-// =============================
-export {
-  Sidebar,
-  SidebarContent,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
-};
+export { Sidebar, SidebarProvider, useSidebar };
