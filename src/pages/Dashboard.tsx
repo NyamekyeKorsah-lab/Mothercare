@@ -1,63 +1,100 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, AlertTriangle, TrendingUp, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useEffect } from "react";
+import { toast } from "sonner";
 
 const Dashboard = () => {
-  const queryClient = useQueryClient();
+  const [products, setProducts] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
 
-  const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*, categories(*), suppliers(*)");
-    if (error) throw error;
-    return data || [];
+  // ✅ Fetch dashboard data
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch products
+      const { data: prodData, error: prodError } = await supabase
+        .from("products")
+        .select("*"); // simplified query, no joins
+
+      if (prodError) throw prodError;
+      setProducts(prodData || []);
+
+      // Fetch sales
+      const { data: salesData, error: salesError } = await supabase
+        .from("sales")
+        .select("*")
+        .order("sale_date", { ascending: false })
+        .limit(10);
+
+      if (salesError) throw salesError;
+      setSales(salesData || []);
+    } catch (err) {
+      console.error("❌ Dashboard fetch error:", err);
+    }
   };
 
-  const fetchSales = async () => {
-    const { data, error } = await supabase
-      .from("sales")
-      .select("*, products(*)")
-      .order("sale_date", { ascending: false })
-      .limit(10);
-    if (error) throw error;
-    return data || [];
-  };
-
-  const { data: products = [], refetch: refetchProducts } = useQuery({
-    queryKey: ["products"],
-    queryFn: fetchProducts,
-    retry: 2, // retry twice if first fetch fails
-  });
-
-  const { data: sales = [], refetch: refetchSales } = useQuery({
-    queryKey: ["recent-sales"],
-    queryFn: fetchSales,
-    retry: 2,
-  });
-
-  // 🔁 Auto-refresh on mount (fixes empty dashboard issue)
+  // ✅ Run once on mount
   useEffect(() => {
-    const refreshData = async () => {
-      if (!products?.length) await refetchProducts();
-      if (!sales?.length) await refetchSales();
+    fetchDashboardData();
+  }, []);
+
+  // ✅ Realtime updates
+  useEffect(() => {
+    const productChannel = supabase
+      .channel("realtime-products")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => {
+          fetchDashboardData();
+          toast.info("🔄 Product data updated!");
+        }
+      )
+      .subscribe();
+
+    const salesChannel = supabase
+      .channel("realtime-sales")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sales" },
+        () => {
+          fetchDashboardData();
+          toast.info("💰 Sales data updated!");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(productChannel);
+      supabase.removeChannel(salesChannel);
     };
-    refreshData();
+  }, []);
 
-    // Optional: Re-fetch every 30 seconds to keep dashboard live
-    const interval = setInterval(refreshData, 30000);
-    return () => clearInterval(interval);
-  }, [products, sales, refetchProducts, refetchSales]);
-
-  const totalStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
-  const lowStockItems = products.filter((p) => p.quantity <= p.reorder_level);
-  const totalSales = sales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
+  // ✅ Calculations
   const totalProducts = products.length;
+  const totalStock = products.reduce(
+    (sum, p) => sum + (p.quantity || 0),
+    0
+  );
+  const lowStockItems = products.filter(
+    (p) => p.quantity <= (p.reorder_level || 0)
+  );
+  const totalSales = sales.reduce(
+    (sum, s) => sum + Number(s.total_amount || 0),
+    0
+  );
+
+  // ✅ Currency formatter
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-GH", {
+      style: "currency",
+      currency: "GHS",
+    }).format(amount);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-semibold">Dashboard</h1>
         <p className="text-muted-foreground mt-1">
@@ -65,7 +102,9 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Summary Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {/* Total Products */}
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -81,6 +120,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Total Stock */}
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -96,6 +136,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Low Stock Alerts */}
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -111,6 +152,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Total Sales */}
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -119,13 +161,81 @@ const Dashboard = () => {
             <DollarSign className="h-5 w-5 text-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">GHS {totalSales.toFixed(2)}</div>
+            <div className="text-3xl font-bold">
+              {formatCurrency(totalSales)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               Revenue generated
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Low Stock Details */}
+      {lowStockItems.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Low Stock Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {lowStockItems.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                >
+                  <div>
+                    <p className="font-medium">{p.product_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Reorder level: {p.reorder_level}
+                    </p>
+                  </div>
+                  <Badge variant="destructive">
+                    {p.quantity} / {p.reorder_level} units
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Sales */}
+      {sales.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle>Recent Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {sales.map((sale) => (
+                <div
+                  key={sale.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                >
+                  <div>
+                    <p className="font-medium">{sale.product_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(sale.sale_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {formatCurrency(Number(sale.total_amount))}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {sale.quantity_sold} units
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
