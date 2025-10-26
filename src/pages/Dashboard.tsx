@@ -9,19 +9,24 @@ const Dashboard = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
 
+  // ✅ Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
+      // Fetch products
       const { data: prodData, error: prodError } = await supabase
         .from("products")
-        .select("*");
+        .select("*"); // simplified query, no joins
+
       if (prodError) throw prodError;
       setProducts(prodData || []);
 
+      // Fetch sales
       const { data: salesData, error: salesError } = await supabase
         .from("sales")
         .select("*")
         .order("sale_date", { ascending: false })
         .limit(10);
+
       if (salesError) throw salesError;
       setSales(salesData || []);
     } catch (err) {
@@ -29,10 +34,12 @@ const Dashboard = () => {
     }
   };
 
+  // ✅ Run once on mount
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
+  // ✅ Realtime updates
   useEffect(() => {
     const productChannel = supabase
       .channel("realtime-products")
@@ -64,6 +71,7 @@ const Dashboard = () => {
     };
   }, []);
 
+  // ✅ Calculations
   const totalProducts = products.length;
   const totalStock = products.reduce(
     (sum, p) => sum + (p.quantity || 0),
@@ -77,6 +85,7 @@ const Dashboard = () => {
     0
   );
 
+  // ✅ Currency formatter
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-GH", {
       style: "currency",
@@ -84,26 +93,27 @@ const Dashboard = () => {
     }).format(amount);
 
   return (
-    <div className="space-y-6 px-3 sm:px-6 md:px-8 pb-8">
-      <div className="text-center sm:text-left">
-        <h1 className="text-2xl sm:text-3xl font-semibold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-semibold">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">
           Overview of your inventory
         </p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Total Products */}
-        <Card className="shadow-sm border border-gray-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Products
             </CardTitle>
             <Package className="h-5 w-5 text-primary" />
           </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-2xl sm:text-3xl font-bold">{totalProducts}</div>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalProducts}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Active items in stock
             </p>
@@ -111,15 +121,15 @@ const Dashboard = () => {
         </Card>
 
         {/* Total Stock */}
-        <Card className="shadow-sm border border-gray-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Stock
             </CardTitle>
             <TrendingUp className="h-5 w-5 text-accent" />
           </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-2xl sm:text-3xl font-bold">{totalStock}</div>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalStock}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Units available
             </p>
@@ -127,15 +137,15 @@ const Dashboard = () => {
         </Card>
 
         {/* Low Stock Alerts */}
-        <Card className="shadow-sm border border-gray-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Low Stock Alerts
             </CardTitle>
             <AlertTriangle className="h-5 w-5 text-destructive" />
           </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-2xl sm:text-3xl font-bold">{lowStockItems.length}</div>
+          <CardContent>
+            <div className="text-3xl font-bold">{lowStockItems.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Items need restock
             </p>
@@ -143,15 +153,15 @@ const Dashboard = () => {
         </Card>
 
         {/* Total Sales */}
-        <Card className="shadow-sm border border-gray-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
+        <Card className="shadow-soft">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Sales
             </CardTitle>
             <DollarSign className="h-5 w-5 text-secondary" />
           </CardHeader>
-          <CardContent className="pb-2">
-            <div className="text-2xl sm:text-3xl font-bold">
+          <CardContent>
+            <div className="text-3xl font-bold">
               {formatCurrency(totalSales)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -161,34 +171,68 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Low Stock Section */}
+      {/* Low Stock Details */}
       {lowStockItems.length > 0 && (
-        <Card className="shadow border border-gray-100">
+        <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               Low Stock Alerts
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {lowStockItems.map((p) => (
-              <div
-                key={p.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg bg-muted/50"
-              >
-                <div className="text-center sm:text-left">
-                  <p className="font-medium text-sm sm:text-base">{p.product_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Reorder level: {p.reorder_level}
-                  </p>
-                </div>
-                <div className="mt-2 sm:mt-0">
-                  <Badge variant="destructive" className="text-xs sm:text-sm">
+          <CardContent>
+            <div className="space-y-3">
+              {lowStockItems.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                >
+                  <div>
+                    <p className="font-medium">{p.product_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Reorder level: {p.reorder_level}
+                    </p>
+                  </div>
+                  <Badge variant="destructive">
                     {p.quantity} / {p.reorder_level} units
                   </Badge>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Sales */}
+      {sales.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle>Recent Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {sales.map((sale) => (
+                <div
+                  key={sale.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                >
+                  <div>
+                    <p className="font-medium">{sale.product_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(sale.sale_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {formatCurrency(Number(sale.total_amount))}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {sale.quantity_sold} units
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
