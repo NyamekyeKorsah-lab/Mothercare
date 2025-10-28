@@ -45,7 +45,7 @@ const Products = () => {
   const [categoryId, setCategoryId] = useState<string>("");
 
   // ✅ Fetch products (join with categories)
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -156,13 +156,13 @@ const Products = () => {
     setEditOpen(true);
   };
 
-  const filteredProducts = products?.filter((p) =>
+  const filteredProducts = products.filter((p) =>
     p.product_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6 px-3 sm:px-6">
-      {/* Header (Now same layout for all screen sizes) */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
@@ -259,63 +259,58 @@ const Products = () => {
         </CardHeader>
 
         <CardContent className="overflow-x-auto">
-          {filteredProducts?.length ? (
-            <div className="min-w-[600px] sm:min-w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[35%] sm:w-auto">Product</TableHead>
-                    <TableHead className="w-[20%] sm:w-auto">Category</TableHead>
-                    <TableHead className="w-[15%] sm:w-auto text-center">
-                      Qty
-                    </TableHead>
-                    <TableHead className="w-[20%] sm:w-auto text-center">
-                      Price
-                    </TableHead>
-                    <TableHead className="hidden sm:table-cell text-center">
-                      Status
-                    </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell>{product.product_name}</TableCell>
-                      <TableCell>{product.categories?.name || "—"}</TableCell>
-                      <TableCell className="text-center">
-                        {product.quantity}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        ₵{product.unit_price.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-center">
-                        {product.quantity <= 0 ? (
-                          <Badge className="bg-gray-500 text-white">
-                            Out of Stock
-                          </Badge>
-                        ) : product.quantity <= product.reorder_level ? (
-                          <Badge variant="destructive">Low Stock</Badge>
-                        ) : (
-                          <Badge className="bg-green-500 text-white">
-                            In Stock
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditClick(product)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+          {filteredProducts.length ? (
+            <table className="w-full min-w-[600px] border-collapse text-sm text-gray-700">
+              <thead className="bg-gray-50">
+                <tr className="border-b border-gray-200 text-left">
+                  <th className="p-3 w-[25%]">Product</th>
+                  <th className="p-3 w-[20%]">Category</th>
+                  <th className="p-3 w-[10%] text-center">Qty</th>
+                  <th className="p-3 w-[15%] text-right">Price</th>
+                  <th className="p-3 w-[15%] text-center">Status</th>
+                  <th className="p-3 w-[15%] text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="p-3 w-[25%]">{p.product_name}</td>
+                    <td className="p-3 w-[20%]">{p.categories?.name || "—"}</td>
+                    <td className="p-3 w-[10%] text-center">{p.quantity}</td>
+                    <td className="p-3 w-[15%] text-right">
+                      ₵{p.unit_price.toFixed(2)}
+                    </td>
+                    <td className="p-3 w-[15%] text-center">
+                      {p.status === "In Stock" ? (
+                        <Badge className="bg-green-500 text-white">
+                          In Stock
+                        </Badge>
+                      ) : p.status === "Low Stock" ? (
+                        <Badge className="bg-red-500 text-white">
+                          Low Stock
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-gray-500 text-white">
+                          Out of Stock
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="p-3 w-[15%] text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditClick(p)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
             <div className="text-center py-8 text-muted-foreground text-sm sm:text-base">
               No products found. Add your first product to get started!
@@ -387,11 +382,7 @@ const Products = () => {
                     ? "Updating..."
                     : "Update Product"}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={resetForm}
-                >
+                <Button variant="outline" className="flex-1" onClick={resetForm}>
                   Cancel
                 </Button>
               </div>
