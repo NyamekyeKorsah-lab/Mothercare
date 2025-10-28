@@ -101,7 +101,8 @@ const Products = () => {
       toast.success("✅ Product added successfully!");
       resetForm();
     },
-    onError: (err: any) => toast.error("❌ Failed to add product: " + err.message),
+    onError: (err: any) =>
+      toast.error("❌ Failed to add product: " + err.message),
   });
 
   // ✅ Edit Product
@@ -130,7 +131,8 @@ const Products = () => {
       toast.success("✏️ Product updated successfully!");
       resetForm();
     },
-    onError: (err: any) => toast.error("❌ Failed to update product: " + err.message),
+    onError: (err: any) =>
+      toast.error("❌ Failed to update product: " + err.message),
   });
 
   const resetForm = () => {
@@ -159,19 +161,22 @@ const Products = () => {
   );
 
   return (
-    <div className="space-y-6 px-2 sm:px-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+    <div className="space-y-6 px-3 sm:px-6">
+      {/* Header (Responsive fixed layout) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold">Products</h1>
-          <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            Manage your product inventory 📦
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+            Products
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 leading-snug">
+            Manage your product inventory 🧾
           </p>
         </div>
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 w-full sm:w-auto px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base">
-              <Plus className="h-4 w-4" /> Add Product
+            <Button className="w-full sm:w-auto py-3 sm:py-2 text-base sm:text-sm font-medium shadow-sm">
+              <Plus className="h-4 w-4 mr-2" /> Add Product
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
@@ -180,7 +185,10 @@ const Products = () => {
             </DialogHeader>
             <div className="space-y-3 py-2">
               <Label>Product Name</Label>
-              <Input value={productName} onChange={(e) => setProductName(e.target.value)} />
+              <Input
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+              />
 
               <Label>Category</Label>
               <Select value={categoryId} onValueChange={setCategoryId}>
@@ -203,10 +211,18 @@ const Products = () => {
               </Select>
 
               <Label>Quantity</Label>
-              <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
 
               <Label>Unit Price (₵)</Label>
-              <Input type="number" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} />
+              <Input
+                type="number"
+                value={unitPrice}
+                onChange={(e) => setUnitPrice(e.target.value)}
+              />
 
               <Label>Reorder Level</Label>
               <Input
@@ -227,7 +243,7 @@ const Products = () => {
         </Dialog>
       </div>
 
-      {/* ✅ Products Table */}
+      {/* ✅ Product List Section */}
       <Card className="shadow-card">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">Product List</CardTitle>
@@ -265,11 +281,15 @@ const Products = () => {
                       <TableCell>₵{product.unit_price.toFixed(2)}</TableCell>
                       <TableCell>
                         {product.quantity <= 0 ? (
-                          <Badge className="bg-gray-500 text-white">Out of Stock</Badge>
+                          <Badge className="bg-gray-500 text-white">
+                            Out of Stock
+                          </Badge>
                         ) : product.quantity <= product.reorder_level ? (
                           <Badge variant="destructive">Low Stock</Badge>
                         ) : (
-                          <Badge className="bg-green-500 text-white">In Stock</Badge>
+                          <Badge className="bg-green-500 text-white">
+                            In Stock
+                          </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
