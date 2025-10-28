@@ -323,6 +323,86 @@ const Products = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* ✏️ Edit Product Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+
+          {editingProduct ? (
+            <div className="space-y-3 py-2">
+              <Label>Product Name</Label>
+              <Input
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+              />
+
+              <Label>Category</Label>
+              <Select
+                value={categoryId}
+                onValueChange={(value) => setCategoryId(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+
+              <Label>Unit Price (₵)</Label>
+              <Input
+                type="number"
+                value={unitPrice}
+                onChange={(e) => setUnitPrice(e.target.value)}
+              />
+
+              <Label>Reorder Level</Label>
+              <Input
+                type="number"
+                value={reorderLevel}
+                onChange={(e) => setReorderLevel(e.target.value)}
+              />
+
+              <div className="flex gap-2 mt-3">
+                <Button
+                  className="flex-1"
+                  onClick={() => editProductMutation.mutate()}
+                  disabled={editProductMutation.isPending}
+                >
+                  {editProductMutation.isPending
+                    ? "Updating..."
+                    : "Update Product"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={resetForm}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No product selected.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

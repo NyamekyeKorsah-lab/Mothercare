@@ -3,9 +3,9 @@ import {
   LayoutDashboard,
   Package,
   Layers,
-  Truck,
   ShoppingCart,
   BarChart2,
+  Utensils,
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,13 @@ import { cn } from "@/lib/utils";
 export const Sidebar = ({ onLinkClick }: { onLinkClick?: () => void }) => {
   const location = useLocation();
 
+  // ✅ Updated navigation items with Food Sales included
   const navItems = [
     { name: "Dashboard", path: "/", icon: LayoutDashboard },
     { name: "Products", path: "/products", icon: Package },
     { name: "Categories", path: "/categories", icon: Layers },
     { name: "Sales", path: "/sales", icon: ShoppingCart },
+    { name: "Food Sales", path: "/foodsales", icon: Utensils }, // 🍴 NEW ENTRY
     { name: "Reports", path: "/reports", icon: BarChart2 },
   ];
 
@@ -40,7 +42,10 @@ export const Sidebar = ({ onLinkClick }: { onLinkClick?: () => void }) => {
       <div className="flex-1 p-4 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isActive =
+            location.pathname === item.path ||
+            (item.path !== "/" && location.pathname.startsWith(item.path));
+
           return (
             <Link
               key={item.name}
