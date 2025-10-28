@@ -1,56 +1,70 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, AlertTriangle, TrendingUp, DollarSign } from "lucide-react";
+import {
+  Package,
+  AlertTriangle,
+  TrendingUp,
+  DollarSign,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const Dashboard = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
+  const [currentSession, setCurrentSession] = useState<any>(null);
 
-  const fetchDashboardData = async () => {
-    try {
-      const { data: prodData, error: prodError } = await supabase
-        .from("products")
-        .select("*");
-      if (prodError) throw prodError;
-      setProducts(prodData || []);
-
-      const { data: salesData, error: salesError } = await supabase
-        .from("sales")
-        .select("*")
-        .order("sale_date", { ascending: false })
-        .limit(10);
-      if (salesError) throw salesError;
-      setSales(salesData || []);
-    } catch (err) {
-      console.error("Dashboard fetch error:", err);
-    }
+  // ✅ Fetch current (latest) account session
+  const fetchCurrentSession = async () => {
+    const { data, error } = await supabase
+      .from("account_sessions")
+      .select("*")
+      .order("accounted_date", { ascending: false })
+      .limit(1)
+      .single();
+    if (!error) setCurrentSession(data);
   };
 
+  // ✅ Fetch products (always visible, not tied to session)
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*, categories:category_id(name)");
+    if (!error) setProducts(data || []);
+  };
+
+  // ✅ Fetch sales (only for active session)
+  const fetchSales = async (sessionId?: number) => {
+    if (!sessionId) return setSales([]);
+    const { data, error } = await supabase
+      .from("sales")
+      .select("*, products(product_name, categories:category_id(name))")
+      .eq("session_id", sessionId)
+      .order("sale_date", { ascending: false })
+      .limit(10);
+    if (!error) setSales(data || []);
+  };
+
+  // ✅ Realtime updates
   useEffect(() => {
-    fetchDashboardData();
-
-    const productChannel = supabase
-      .channel("realtime-products")
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, fetchDashboardData)
-      .subscribe();
-
-    const salesChannel = supabase
-      .channel("realtime-sales")
-      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, fetchDashboardData)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(productChannel);
-      supabase.removeChannel(salesChannel);
-    };
+    fetchCurrentSession();
+    fetchProducts();
   }, []);
+
+  useEffect(() => {
+    if (currentSession?.id) fetchSales(currentSession.id);
+  }, [currentSession?.id]);
 
   const totalProducts = products.length;
   const totalStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
-  const lowStockItems = products.filter((p) => p.quantity <= (p.reorder_level || 0));
-  const totalRevenue = sales.reduce((sum, s) => sum + Number(s.total_price || 0), 0);
+  const stockAlerts = products.filter(
+    (p) => p.quantity <= (p.reorder_level || 0)
+  );
+
+  const totalRevenue = sales.reduce(
+    (sum, s) => sum + Number(s.total_price || 0),
+    0
+  );
   const totalSalesCount = sales.length;
 
   const formatCurrency = (amount: number) =>
@@ -70,6 +84,12 @@ const Dashboard = () => {
         <p className="text-muted-foreground text-xs sm:text-sm mt-1">
           Overview of your inventory
         </p>
+        {currentSession && (
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
+            Active Account:{" "}
+            {new Date(currentSession.accounted_date).toLocaleString()}
+          </p>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -88,16 +108,18 @@ const Dashboard = () => {
             sub: "Units available",
           },
           {
-            title: "Low Stock Alerts",
-            value: lowStockItems.length,
-            icon: <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />,
-            sub: "Items need restock",
+            title: "Stock Alerts",
+            value: stockAlerts.length,
+            icon: (
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
+            ),
+            sub: "Low or out of stock items",
           },
           {
             title: "Total Sales",
             value: formatCurrency(totalRevenue),
             icon: <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />,
-            sub: `${totalSalesCount} recorded sale${totalSalesCount !== 1 ? "s" : ""}`,
+            sub: `${totalSalesCount} sale${totalSalesCount !== 1 ? "s" : ""} this session`,
           },
         ].map((item, i) => (
           <Card
@@ -121,32 +143,51 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Low Stock Alerts */}
-      {lowStockItems.length > 0 && (
+      {/* Stock Alerts */}
+      {stockAlerts.length > 0 && (
         <Card className="shadow-sm w-full">
           <CardHeader className="px-3 sm:px-4">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              Low Stock Alerts
+              Stock Alerts
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 px-3 sm:px-4">
-            {lowStockItems.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-muted/50"
-              >
-                <div className="text-left">
-                  <p className="font-medium text-sm sm:text-base">{p.product_name}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Reorder level: {p.reorder_level}
-                  </p>
+            {stockAlerts.map((p) => {
+              const isOutOfStock =
+                p.quantity === 0 || p.status === "Out of Stock";
+              return (
+                <div
+                  key={p.id}
+                  className={`flex items-center justify-between p-2 sm:p-3 rounded-lg ${
+                    isOutOfStock
+                      ? "bg-gray-100 dark:bg-gray-800"
+                      : "bg-muted/50"
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-medium text-sm sm:text-base">
+                      {p.product_name} ({p.categories?.name || "Uncategorized"})
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
+                      {isOutOfStock
+                        ? "Out of stock"
+                        : `Reorder level: ${p.reorder_level}`}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={isOutOfStock ? "secondary" : "destructive"}
+                    className={`text-[10px] sm:text-xs px-2 py-1 ${
+                      isOutOfStock
+                        ? "bg-gray-300 dark:bg-gray-700 text-gray-800"
+                        : ""
+                    }`}
+                  >
+                    {p.quantity} / {p.reorder_level} units
+                  </Badge>
                 </div>
-                <Badge variant="destructive" className="text-[10px] sm:text-xs px-2 py-1">
-                  {p.quantity} / {p.reorder_level} units
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       )}
@@ -165,14 +206,19 @@ const Dashboard = () => {
                 key={sale.id}
                 className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-muted/50"
               >
-                <div className="text-left">
-                  <p className="font-medium text-sm sm:text-base">{sale.product_name}</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 text-left">
+                  <p className="text-sm sm:text-base text-foreground/70">
                     {new Date(sale.sale_date).toLocaleDateString()}
+                  </p>
+                  <p className="text-sm sm:text-base font-medium text-foreground/85">
+                    {sale.products?.product_name}{" "}
+                    <span className="text-muted-foreground">
+                      ({sale.products?.categories?.name || "Uncategorized"})
+                    </span>
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-sm sm:text-base break-words">
+                  <p className="text-sm sm:text-base font-normal text-foreground/80">
                     {formatCurrency(Number(sale.total_price))}
                   </p>
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
