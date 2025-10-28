@@ -38,33 +38,40 @@ const Sales = () => {
   const [total, setTotal] = useState<number | "">("");
   const [currentSession, setCurrentSession] = useState<any>(null);
 
-  // ✅ Fetch current active session
-  const fetchCurrentSession = async () => {
-    const { data, error } = await supabase
-      .from("account_sessions")
-      .select("*")
-      .order("accounted_date", { ascending: false })
-      .limit(1)
-      .single();
-    if (error) console.error("Fetch session error:", error);
-    else setCurrentSession(data);
-  };
+  // ✅ Fetch or create session automatically
+  const fetchOrCreateSession = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("account_sessions")
+        .select("*")
+        .order("accounted_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-  // ✅ Create new account session
-  const handleMakeAccount = async () => {
-    const { error } = await supabase.from("account_sessions").insert([
-      {
-        accounted_date: new Date().toISOString(),
-      },
-    ]);
-    if (error) {
-      toast.error("❌ Failed to make account: " + error.message);
-    } else {
-      toast.success("✅ New account session created!");
-      fetchCurrentSession();
-      queryClient.invalidateQueries({ queryKey: ["sales"] });
+      if (error) throw error;
+
+      if (!data) {
+        const { data: newSession, error: insertError } = await supabase
+          .from("account_sessions")
+          .insert([{ accounted_date: new Date().toISOString() }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        setCurrentSession(newSession);
+        toast.success("✅ Session created automatically");
+      } else {
+        setCurrentSession(data);
+      }
+    } catch (err: any) {
+      console.error("Session setup failed:", err.message);
+      toast.error("❌ Could not initialize session");
     }
   };
+
+  useEffect(() => {
+    fetchOrCreateSession();
+  }, []);
 
   // ✅ Fetch products
   const { data: products = [] } = useQuery({
@@ -80,7 +87,7 @@ const Sales = () => {
     },
   });
 
-  // ✅ Fetch current session sales
+  // ✅ Fetch sales for current session
   const { data: sales = [] } = useQuery({
     queryKey: ["sales", currentSession?.id],
     queryFn: async () => {
@@ -96,17 +103,20 @@ const Sales = () => {
     enabled: !!currentSession,
   });
 
-  // ✅ Add sale
+  // ✅ Add Sale
   const addSaleMutation = useMutation({
     mutationFn: async (newSale: any) => {
+      if (!currentSession?.id) throw new Error("⚠️ No active session found");
+
       const { data: product, error: fetchError } = await supabase
         .from("products")
         .select("quantity, status, reorder_level")
         .eq("id", newSale.product_id)
         .single();
-      if (fetchError) throw fetchError;
 
+      if (fetchError) throw fetchError;
       if (!product) throw new Error("Product not found");
+
       if (product.status === "Out of Stock" || product.quantity <= 0)
         throw new Error("❌ Product is out of stock!");
       if (newSale.quantity_sold > product.quantity)
@@ -123,7 +133,7 @@ const Sales = () => {
       const { error: saleError } = await supabase.from("sales").insert([
         {
           ...newSale,
-          session_id: currentSession?.id || null,
+          session_id: currentSession.id,
         },
       ]);
       if (saleError) throw saleError;
@@ -132,6 +142,7 @@ const Sales = () => {
         .from("products")
         .update({ quantity: newQty, status: newStatus })
         .eq("id", newSale.product_id);
+
       if (updateError) throw updateError;
     },
     onSuccess: () => {
@@ -143,10 +154,10 @@ const Sales = () => {
       setQuantity("");
       setTotal("");
     },
-    onError: (err: any) => toast.error("❌ " + err.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
-  // ✅ Delete sale
+  // ✅ Delete Sale
   const deleteSaleMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("sales").delete().eq("id", id);
@@ -159,17 +170,13 @@ const Sales = () => {
     onError: (err: any) => toast.error("❌ " + err.message),
   });
 
-  // ✅ Auto total calc
+  // ✅ Auto calculate total
   useEffect(() => {
     if (selectedProduct && quantity) {
       const totalValue = Number(selectedProduct.unit_price) * Number(quantity);
       setTotal(Number(totalValue.toFixed(2)));
     } else setTotal("");
   }, [selectedProduct, quantity]);
-
-  useEffect(() => {
-    fetchCurrentSession();
-  }, []);
 
   const totalRevenue = sales.reduce((sum, s) => sum + Number(s.total_price || 0), 0);
   const totalSales = sales.length;
@@ -179,24 +186,21 @@ const Sales = () => {
     <div className="space-y-6 px-3 sm:px-6">
       <div className="flex items-start justify-between flex-wrap sm:flex-nowrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Sales</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-8 leading-snug break-words">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+            Sales
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-8">
             Manage customer sales, invoices, and transactions
           </p>
         </div>
 
-        {/* Buttons */}
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={handleMakeAccount} variant="outline" className="px-3 sm:px-4">
-            Make Account
-          </Button>
-
           {/* View Old Sales */}
           <Dialog>
             <DialogTrigger asChild>
               <Button
                 variant="secondary"
-                className="px-3 sm:px-4 bg-rose-200 text-black hover:bg-rose-300"
+                className="bg-rose-200 text-black hover:bg-rose-300"
               >
                 📜 View Old Sales
               </Button>
@@ -212,7 +216,7 @@ const Sales = () => {
           {/* Add Sale */}
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 text-sm sm:text-base px-3 sm:px-4">
+              <Button className="gap-2">
                 <Plus className="h-4 w-4" /> Add Sale
               </Button>
             </DialogTrigger>
@@ -304,7 +308,7 @@ const Sales = () => {
                 <DialogFooter>
                   <Button
                     type="submit"
-                    className="w-full py-3 text-base"
+                    className="w-full py-3"
                     disabled={addSaleMutation.isPending}
                   >
                     {addSaleMutation.isPending ? "Saving..." : "Save Sale"}
@@ -316,7 +320,7 @@ const Sales = () => {
         </div>
       </div>
 
-      {/* Summary */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Card className="p-4 text-center shadow-sm rounded-xl">
           <CardHeader>
@@ -364,7 +368,7 @@ const Sales = () => {
           {sales.length > 0 ? (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
+                <tr className="border-b border-gray-200">
                   <th className="p-3">Date</th>
                   <th className="p-3">Product</th>
                   <th className="p-3">Category</th>
@@ -380,13 +384,9 @@ const Sales = () => {
                       {new Date(sale.sale_date).toLocaleDateString()}
                     </td>
                     <td className="p-3">{sale.products?.product_name}</td>
-                    <td className="p-3">
-                      {sale.products?.categories?.name || "—"}
-                    </td>
+                    <td className="p-3">{sale.products?.categories?.name || "—"}</td>
                     <td className="p-3">{sale.quantity_sold}</td>
-                    <td className="p-3">
-                      {formatCurrency(sale.total_price)}
-                    </td>
+                    <td className="p-3">{formatCurrency(sale.total_price)}</td>
                     <td className="p-3 text-right">
                       <Button
                         variant="destructive"
@@ -422,47 +422,40 @@ const OldSalesList = () => {
 
   const fetchSessionsWithSales = async () => {
     setLoading(true);
-
-    const { data: sessions, error: sessionError } = await supabase
+    const { data: sessions, error } = await supabase
       .from("account_sessions")
       .select("id, accounted_date")
       .order("accounted_date", { ascending: false });
 
-    if (sessionError || !sessions) {
-      console.error(sessionError);
-      setSessionsWithSales([]);
+    if (error) {
+      console.error(error);
       setLoading(false);
       return;
     }
 
-    const sessionsData = await Promise.all(
+    const result = await Promise.all(
       sessions.map(async (s) => {
-        const { data: sales, error: salesError } = await supabase
+        const { data: sales } = await supabase
           .from("sales")
           .select("*, products(product_name, categories:category_id(name))")
           .eq("session_id", s.id)
           .order("sale_date", { ascending: false });
-
-        if (salesError) console.error(salesError);
 
         const totalRevenue = (sales || []).reduce(
           (sum, sale) => sum + Number(sale.total_price || 0),
           0
         );
 
-        return { ...s, sales: sales || [], totalRevenue };
+        return { ...s, sales, totalRevenue };
       })
     );
 
-    setSessionsWithSales(sessionsData);
+    setSessionsWithSales(result);
     setLoading(false);
   };
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-GH", {
-      style: "currency",
-      currency: "GHS",
-    }).format(amount);
+    new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" }).format(amount);
 
   return (
     <div className="space-y-6">
@@ -476,10 +469,7 @@ const OldSalesList = () => {
         </p>
       ) : (
         sessionsWithSales.map((session) => (
-          <div
-            key={session.id}
-            className="border border-gray-200 rounded-lg p-4 shadow-sm"
-          >
+          <div key={session.id} className="border border-gray-200 rounded-lg p-4 shadow-sm">
             <h3 className="font-semibold text-base mb-3">
               Session — {new Date(session.accounted_date).toLocaleString()}
             </h3>
@@ -489,7 +479,7 @@ const OldSalesList = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <tr className="border-b border-gray-200">
                         <th className="p-2">Date</th>
                         <th className="p-2">Product</th>
                         <th className="p-2">Category</th>
