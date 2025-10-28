@@ -162,8 +162,8 @@ const Products = () => {
 
   return (
     <div className="space-y-6 px-3 sm:px-6">
-      {/* Header (Responsive fixed layout) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      {/* Header (Now same layout for all screen sizes) */}
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Products
@@ -175,8 +175,8 @@ const Products = () => {
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto py-3 sm:py-2 text-base sm:text-sm font-medium shadow-sm">
-              <Plus className="h-4 w-4 mr-2" /> Add Product
+            <Button className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base">
+              <Plus className="h-4 w-4 mr-1" /> Add Product
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
@@ -260,15 +260,21 @@ const Products = () => {
 
         <CardContent className="overflow-x-auto">
           {filteredProducts?.length ? (
-            <div className="min-w-[700px] sm:min-w-full">
+            <div className="min-w-[600px] sm:min-w-full">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="w-[35%] sm:w-auto">Product</TableHead>
+                    <TableHead className="w-[20%] sm:w-auto">Category</TableHead>
+                    <TableHead className="w-[15%] sm:w-auto text-center">
+                      Qty
+                    </TableHead>
+                    <TableHead className="w-[20%] sm:w-auto text-center">
+                      Price
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell text-center">
+                      Status
+                    </TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -277,9 +283,13 @@ const Products = () => {
                     <TableRow key={product.id}>
                       <TableCell>{product.product_name}</TableCell>
                       <TableCell>{product.categories?.name || "—"}</TableCell>
-                      <TableCell>{product.quantity}</TableCell>
-                      <TableCell>₵{product.unit_price.toFixed(2)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
+                        {product.quantity}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        ₵{product.unit_price.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-center">
                         {product.quantity <= 0 ? (
                           <Badge className="bg-gray-500 text-white">
                             Out of Stock
@@ -313,67 +323,6 @@ const Products = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* ✏️ Edit Product Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-          </DialogHeader>
-          {editingProduct && (
-            <div className="space-y-3 py-2">
-              <Label>Product Name</Label>
-              <Input
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-              />
-
-              <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-
-              <Label>Unit Price (₵)</Label>
-              <Input
-                type="number"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
-              />
-
-              <Label>Reorder Level</Label>
-              <Input
-                type="number"
-                value={reorderLevel}
-                onChange={(e) => setReorderLevel(e.target.value)}
-              />
-
-              <Button
-                className="w-full mt-2"
-                onClick={() => editProductMutation.mutate()}
-                disabled={editProductMutation.isPending}
-              >
-                {editProductMutation.isPending ? "Updating..." : "Update Product"}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
