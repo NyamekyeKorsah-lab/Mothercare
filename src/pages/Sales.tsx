@@ -37,6 +37,7 @@ const Sales = () => {
   const [quantity, setQuantity] = useState<number | "">("");
   const [total, setTotal] = useState<number | "">("");
   const [currentSession, setCurrentSession] = useState<any>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
 
   const fetchCurrentSession = async () => {
     const { data, error } = await supabase
@@ -45,7 +46,6 @@ const Sales = () => {
       .order("accounted_date", { ascending: false })
       .limit(1)
       .single();
-
     if (error) setCurrentSession(null);
     else setCurrentSession(data);
   };
@@ -62,6 +62,7 @@ const Sales = () => {
       toast.success("✅ New account session created!");
       setCurrentSession(data);
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      setLastUpdated(new Date().toLocaleTimeString());
     }
   };
 
@@ -96,6 +97,7 @@ const Sales = () => {
   const addSaleMutation = useMutation({
     mutationFn: async (newSale: any) => {
       if (!currentSession?.id) throw new Error("⚠️ No active session found.");
+
       const { data: product, error: fetchError } = await supabase
         .from("products")
         .select("quantity, status, reorder_level")
@@ -117,9 +119,9 @@ const Sales = () => {
           ? "Low Stock"
           : "In Stock";
 
-      const { error: saleError } = await supabase.from("sales").insert([
-        { ...newSale, session_id: currentSession.id },
-      ]);
+      const { error: saleError } = await supabase
+        .from("sales")
+        .insert([{ ...newSale, session_id: currentSession.id }]);
       if (saleError) throw saleError;
 
       const { error: updateError } = await supabase
@@ -136,6 +138,7 @@ const Sales = () => {
       setSelectedProduct(null);
       setQuantity("");
       setTotal("");
+      setLastUpdated(new Date().toLocaleTimeString());
     },
     onError: (err: any) => toast.error("❌ " + err.message),
   });
@@ -148,6 +151,7 @@ const Sales = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       toast.success("🗑️ Sale deleted.");
+      setLastUpdated(new Date().toLocaleTimeString());
     },
     onError: (err: any) => toast.error("❌ " + err.message),
   });
@@ -161,6 +165,7 @@ const Sales = () => {
 
   useEffect(() => {
     fetchCurrentSession();
+    setLastUpdated(new Date().toLocaleTimeString());
   }, []);
 
   const totalRevenue = sales.reduce((sum, s) => sum + Number(s.total_price || 0), 0);
@@ -180,6 +185,9 @@ const Sales = () => {
           </p>
           <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
             Track revenue, transactions, and performance in real time.
+          </p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 italic">
+            Last updated: {lastUpdated}
           </p>
         </div>
 
@@ -305,43 +313,21 @@ const Sales = () => {
 
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <Card className="p-4 text-center shadow-sm rounded-xl">
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">
-              Total Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p>
-            <p className="text-xs text-muted-foreground">
-              {totalSales} sales total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="p-4 text-center shadow-sm rounded-xl">
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">
-              Total Sales
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold">{totalSales}</p>
-            <p className="text-xs text-muted-foreground">Recorded sales</p>
-          </CardContent>
-        </Card>
-
-        <Card className="p-4 text-center shadow-sm rounded-xl col-span-2 sm:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">
-              Average Sale
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold">{formatCurrency(averageSale)}</p>
-            <p className="text-xs text-muted-foreground">Per transaction</p>
-          </CardContent>
-        </Card>
+        {[
+          { title: "Total Revenue", value: formatCurrency(totalRevenue), sub: `${totalSales} sales total` },
+          { title: "Total Sales", value: totalSales, sub: "Recorded sales" },
+          { title: "Average Sale", value: formatCurrency(averageSale), sub: "Per transaction" },
+        ].map((item, i) => (
+          <Card key={i} className="p-4 text-center shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm text-muted-foreground">{item.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-bold">{item.value}</p>
+              <p className="text-xs text-muted-foreground">{item.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Sales Table */}
@@ -366,7 +352,7 @@ const Sales = () => {
               </thead>
               <tbody>
                 {sales.map((sale) => (
-                  <tr key={sale.id} className="border-b hover:bg-gray-50">
+                  <tr key={sale.id} className="border-b hover:bg-gray-50 transition-colors">
                     <td className="p-3">
                       {new Date(sale.sale_date).toLocaleDateString()}
                     </td>
@@ -374,7 +360,9 @@ const Sales = () => {
                     <td className="p-3">
                       {sale.products?.categories?.name || "—"}
                     </td>
-                    <td className="p-3 text-center">{sale.quantity_sold}</td>
+                    <td className="p-3 text-center">
+                      {sale.quantity_sold}
+                    </td>
                     <td className="p-3 text-right">
                       {formatCurrency(sale.total_price)}
                     </td>
@@ -398,11 +386,15 @@ const Sales = () => {
           )}
         </CardContent>
       </Card>
+
+      <footer className="text-[11px] text-center text-muted-foreground mt-8 pb-4">
+        © {new Date().getFullYear()} Mount Carmel Inventory System
+      </footer>
     </div>
   );
 };
 
-// ✅ Old Sales List
+/* ---------- Old Sales List ---------- */
 const OldSalesList = ({ currentSessionId }: { currentSessionId?: string }) => {
   const [sessionsWithSales, setSessionsWithSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -448,7 +440,10 @@ const OldSalesList = ({ currentSessionId }: { currentSessionId?: string }) => {
         </p>
       ) : (
         sessionsWithSales.map((session) => (
-          <div key={session.id} className="border rounded-lg p-4 shadow-sm">
+          <div
+            key={session.id}
+            className="border border-gray-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-all"
+          >
             <h3 className="font-semibold text-base mb-3">
               Session — {new Date(session.accounted_date).toLocaleString()}
             </h3>
@@ -467,7 +462,7 @@ const OldSalesList = ({ currentSessionId }: { currentSessionId?: string }) => {
                     </thead>
                     <tbody>
                       {session.sales.map((sale: any) => (
-                        <tr key={sale.id} className="border-b border-gray-100">
+                        <tr key={sale.id} className="border-b hover:bg-gray-50 transition-colors">
                           <td className="p-2">
                             {new Date(sale.sale_date).toLocaleDateString()}
                           </td>

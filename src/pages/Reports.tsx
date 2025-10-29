@@ -19,6 +19,7 @@ const Reports = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState("");
 
   const [form, setForm] = useState({
     date: "",
@@ -43,6 +44,7 @@ const Reports = () => {
   useEffect(() => {
     if (activeTab === "mothercare") fetchProductReports();
     else fetchKitchenReports();
+    setLastUpdated(new Date().toLocaleString());
   }, [startDate, endDate, activeTab]);
 
   // 🍼 Fetch Mothercare Reports
@@ -190,7 +192,10 @@ const Reports = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold">Reports</h1>
           <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            Monitor and compare sales performance across Mothercare 🍼 and Kitchen 🍳 departments.
+            Monitor and compare performance across Mothercare 🍼 and Kitchen 🍳
+          </p>
+          <p className="text-xs text-muted-foreground italic mt-1">
+            Last updated: {lastUpdated}
           </p>
         </div>
 
@@ -219,96 +224,186 @@ const Reports = () => {
 
       {/* Mothercare Section */}
       {activeTab === "mothercare" && (
-        <div>
+        <div className="space-y-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">🍼 Mothercare Report</h2>
-            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" /> Add Report
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
-                <DialogHeader>
-                  <DialogTitle>Add Mothercare Report</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3 py-2">
-                  <Input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Total Revenue (₵)"
-                    value={form.totalRevenue}
-                    onChange={(e) => setForm({ ...form, totalRevenue: e.target.value })}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Total Sales"
-                    value={form.totalSales}
-                    onChange={(e) => setForm({ ...form, totalSales: e.target.value })}
-                  />
-                  <Textarea
-                    placeholder="Notes (optional)"
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  />
-                  <Button className="w-full" onClick={handleAddReport}>
-                    Save Report
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => exportToCSV("Mothercare Top Products", productSummary.topProducts)}
+              >
+                <Download className="h-4 w-4 mr-1" /> Export
+              </Button>
+              <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" /> Add Report
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
+                  <DialogHeader>
+                    <DialogTitle>Add Mothercare Report</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3 py-2">
+                    <Input
+                      type="date"
+                      value={form.date}
+                      onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Total Revenue (₵)"
+                      value={form.totalRevenue}
+                      onChange={(e) => setForm({ ...form, totalRevenue: e.target.value })}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Total Sales"
+                      value={form.totalSales}
+                      onChange={(e) => setForm({ ...form, totalSales: e.target.value })}
+                    />
+                    <Textarea
+                      placeholder="Notes (optional)"
+                      value={form.notes}
+                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    />
+                    <Button className="w-full" onClick={handleAddReport}>
+                      Save Report
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>₵{productSummary.totalRevenue.toFixed(2)}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Sales</CardTitle>
+              </CardHeader>
+              <CardContent>{productSummary.totalSales}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Remaining Stock</CardTitle>
+              </CardHeader>
+              <CardContent>{productSummary.remainingStock}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Products</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {productSummary.topProducts.length ? (
+                  <ul className="space-y-1">
+                    {productSummary.topProducts.map((p) => (
+                      <li key={p.name} className="flex justify-between text-sm">
+                        <span>{p.name}</span>
+                        <span className="font-semibold">{p.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No sales found</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
 
       {/* Kitchen Section */}
       {activeTab === "kitchen" && (
-        <div>
+        <div className="space-y-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">🍳 Kitchen Report</h2>
-            <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" /> Add Report
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
-                <DialogHeader>
-                  <DialogTitle>Add Kitchen Report</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-3 py-2">
-                  <Input
-                    type="date"
-                    value={form.date}
-                    onChange={(e) => setForm({ ...form, date: e.target.value })}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Total Revenue (₵)"
-                    value={form.totalRevenue}
-                    onChange={(e) => setForm({ ...form, totalRevenue: e.target.value })}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Total Sales"
-                    value={form.totalSales}
-                    onChange={(e) => setForm({ ...form, totalSales: e.target.value })}
-                  />
-                  <Textarea
-                    placeholder="Notes (optional)"
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  />
-                  <Button className="w-full" onClick={handleAddReport}>
-                    Save Report
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => exportToCSV("Kitchen Top Foods", kitchenSummary.topFoods)}
+              >
+                <Download className="h-4 w-4 mr-1" /> Export
+              </Button>
+              <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" /> Add Report
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
+                  <DialogHeader>
+                    <DialogTitle>Add Kitchen Report</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3 py-2">
+                    <Input
+                      type="date"
+                      value={form.date}
+                      onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Total Revenue (₵)"
+                      value={form.totalRevenue}
+                      onChange={(e) => setForm({ ...form, totalRevenue: e.target.value })}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Total Sales"
+                      value={form.totalSales}
+                      onChange={(e) => setForm({ ...form, totalSales: e.target.value })}
+                    />
+                    <Textarea
+                      placeholder="Notes (optional)"
+                      value={form.notes}
+                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    />
+                    <Button className="w-full" onClick={handleAddReport}>
+                      Save Report
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>₵{kitchenSummary.totalRevenue.toFixed(2)}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Sales</CardTitle>
+              </CardHeader>
+              <CardContent>{kitchenSummary.totalSales}</CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Foods</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {kitchenSummary.topFoods.length ? (
+                  <ul className="space-y-1">
+                    {kitchenSummary.topFoods.map((f) => (
+                      <li key={f.name} className="flex justify-between text-sm">
+                        <span>{f.name}</span>
+                        <span className="font-semibold">{f.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No food sales found</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}

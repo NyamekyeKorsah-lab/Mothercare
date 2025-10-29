@@ -8,6 +8,7 @@ const Dashboard = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [currentSession, setCurrentSession] = useState<any>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>("");
 
   // ✅ Fetch current (latest) account session
   const fetchCurrentSession = async () => {
@@ -20,7 +21,7 @@ const Dashboard = () => {
     if (!error) setCurrentSession(data);
   };
 
-  // ✅ Fetch products (always visible, not tied to session)
+  // ✅ Fetch products
   const fetchProducts = async () => {
     const { data, error } = await supabase
       .from("products")
@@ -28,7 +29,7 @@ const Dashboard = () => {
     if (!error) setProducts(data || []);
   };
 
-  // ✅ Fetch sales (only for active session)
+  // ✅ Fetch sales
   const fetchSales = async (sessionId?: number) => {
     if (!sessionId) return setSales([]);
     const { data, error } = await supabase
@@ -40,14 +41,18 @@ const Dashboard = () => {
     if (!error) setSales(data || []);
   };
 
-  // ✅ Realtime updates
+  // ✅ Load data
   useEffect(() => {
     fetchCurrentSession();
     fetchProducts();
+    setLastUpdated(new Date().toLocaleTimeString());
   }, []);
 
   useEffect(() => {
-    if (currentSession?.id) fetchSales(currentSession.id);
+    if (currentSession?.id) {
+      fetchSales(currentSession.id);
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
   }, [currentSession?.id]);
 
   const totalProducts = products.length;
@@ -71,6 +76,12 @@ const Dashboard = () => {
 
   return (
     <div className="w-full px-2 sm:px-4 md:px-6 space-y-5 max-w-screen-xl mx-auto">
+      {/* Breadcrumb */}
+      <nav className="text-xs sm:text-sm text-muted-foreground mb-2">
+        <span className="hover:text-primary cursor-pointer">Home</span> ›{" "}
+        <span className="text-foreground font-medium">Dashboard</span>
+      </nav>
+
       {/* Header */}
       <div className="text-left">
         <h1 className="text-2xl sm:text-3xl font-semibold leading-tight">
@@ -81,6 +92,9 @@ const Dashboard = () => {
         </p>
         <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
           Track product performance, sales, and stock status in real time.
+        </p>
+        <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 italic">
+          Last updated: {lastUpdated}
         </p>
       </div>
 
@@ -116,7 +130,7 @@ const Dashboard = () => {
         ].map((item, i) => (
           <Card
             key={i}
-            className="flex flex-col justify-center items-center p-2 sm:p-4 rounded-xl shadow-sm w-full"
+            className="flex flex-col justify-center items-center p-2 sm:p-4 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-all duration-200"
           >
             <CardHeader className="flex flex-col items-center justify-center space-y-1 p-0 text-center">
               <CardTitle className="text-[11px] sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
@@ -137,7 +151,7 @@ const Dashboard = () => {
 
       {/* Stock Alerts */}
       {stockAlerts.length > 0 && (
-        <Card className="shadow-sm w-full">
+        <Card className="shadow-md border border-gray-100 hover:shadow-lg transition-all duration-200 w-full">
           <CardHeader className="px-3 sm:px-4">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base font-semibold">
               <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -155,7 +169,7 @@ const Dashboard = () => {
                     isOutOfStock
                       ? "bg-gray-100 dark:bg-gray-800"
                       : "bg-muted/50"
-                  }`}
+                  } hover:bg-gray-50 transition-colors duration-200`}
                 >
                   <div className="text-left">
                     <p className="font-medium text-sm sm:text-base">
@@ -186,7 +200,7 @@ const Dashboard = () => {
 
       {/* Recent Sales */}
       {sales.length > 0 && (
-        <Card className="shadow-sm w-full">
+        <Card className="shadow-md border border-gray-100 hover:shadow-lg transition-all duration-200 w-full">
           <CardHeader className="px-3 sm:px-4">
             <CardTitle className="text-sm sm:text-base font-semibold">
               Recent Sales
@@ -196,7 +210,7 @@ const Dashboard = () => {
             {sales.map((sale) => (
               <div
                 key={sale.id}
-                className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-muted/50"
+                className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-muted/50 hover:bg-gray-50 transition-colors duration-200"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 text-left">
                   <p className="text-sm sm:text-base text-foreground/70">
@@ -222,6 +236,11 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Footer */}
+      <footer className="text-[11px] text-center text-muted-foreground mt-8 pb-4">
+        © {new Date().getFullYear()} Mount Carmel Inventory System
+      </footer>
     </div>
   );
 };

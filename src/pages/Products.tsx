@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ const Products = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const queryClient = useQueryClient();
+  const [lastUpdated, setLastUpdated] = useState<string>("");
 
   const [productName, setProductName] = useState("");
   const [quantity, setQuantity] = useState<string>("");
@@ -36,7 +37,7 @@ const Products = () => {
   const [reorderLevel, setReorderLevel] = useState<string>("5");
   const [categoryId, setCategoryId] = useState<string>("");
 
-  // ✅ Fetch products (join with categories)
+  // ✅ Fetch products
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -91,6 +92,7 @@ const Products = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("✅ Product added successfully!");
+      setLastUpdated(new Date().toLocaleTimeString());
       resetForm();
     },
     onError: (err: any) =>
@@ -121,6 +123,7 @@ const Products = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast.success("✏️ Product updated successfully!");
+      setLastUpdated(new Date().toLocaleTimeString());
       resetForm();
     },
     onError: (err: any) =>
@@ -152,10 +155,20 @@ const Products = () => {
     p.product_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  useEffect(() => {
+    setLastUpdated(new Date().toLocaleTimeString());
+  }, [products]);
+
   return (
     <div className="space-y-6 px-3 sm:px-6">
+      {/* Breadcrumb */}
+      <nav className="text-xs sm:text-sm text-muted-foreground mb-2">
+        <span className="hover:text-primary cursor-pointer">Home</span> ›{" "}
+        <span className="text-foreground font-medium">Products</span>
+      </nav>
+
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Products
@@ -166,12 +179,15 @@ const Products = () => {
           <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
             Add, edit, and monitor your product inventory in real time.
           </p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 italic">
+            Last updated: {lastUpdated}
+          </p>
         </div>
 
         {/* Add Product Button */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base">
+            <Button className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base hover:scale-[1.02] transition-all duration-200">
               <Plus className="h-4 w-4 mr-1" /> Add Product
             </Button>
           </DialogTrigger>
@@ -240,7 +256,7 @@ const Products = () => {
       </div>
 
       {/* ✅ Product List Section */}
-      <Card className="shadow-sm rounded-xl">
+      <Card className="shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-all duration-200">
         <CardHeader>
           <CardTitle className="text-base sm:text-lg font-semibold">
             Product List
@@ -273,7 +289,7 @@ const Products = () => {
                 {filteredProducts.map((p) => (
                   <tr
                     key={p.id}
-                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                    className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200"
                   >
                     <td className="p-3 w-[25%]">{p.product_name}</td>
                     <td className="p-3 w-[20%]">
@@ -303,6 +319,7 @@ const Products = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditClick(p)}
+                        className="hover:scale-[1.05] transition-all duration-200"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -374,7 +391,7 @@ const Products = () => {
 
               <div className="flex gap-2 mt-3">
                 <Button
-                  className="flex-1"
+                  className="flex-1 hover:scale-[1.02] transition-all duration-200"
                   onClick={() => editProductMutation.mutate()}
                   disabled={editProductMutation.isPending}
                 >
@@ -382,7 +399,11 @@ const Products = () => {
                     ? "Updating..."
                     : "Update Product"}
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={resetForm}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={resetForm}
+                >
                   Cancel
                 </Button>
               </div>
@@ -394,6 +415,11 @@ const Products = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <footer className="text-[11px] text-center text-muted-foreground mt-8 pb-4">
+        © {new Date().getFullYear()} Mount Carmel Inventory System
+      </footer>
     </div>
   );
 };
