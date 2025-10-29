@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Package,
-  AlertTriangle,
-  TrendingUp,
-  DollarSign,
-} from "lucide-react";
+import { Package, AlertTriangle, TrendingUp, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const Dashboard = () => {
@@ -82,14 +77,11 @@ const Dashboard = () => {
           Dashboard
         </h1>
         <p className="text-muted-foreground text-xs sm:text-sm mt-1">
-          Overview of your inventory
+          Real-Time Inventory Insights
         </p>
-        {currentSession && (
-          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
-            Active Account:{" "}
-            {new Date(currentSession.accounted_date).toLocaleString()}
-          </p>
-        )}
+        <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
+          Track product performance, sales, and stock status in real time.
+        </p>
       </div>
 
       {/* Summary Cards */}

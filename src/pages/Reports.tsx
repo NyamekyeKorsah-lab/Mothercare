@@ -45,15 +45,13 @@ const Reports = () => {
     else fetchKitchenReports();
   }, [startDate, endDate, activeTab]);
 
-  // 🍼 Fetch Mothercare (Product) Reports
+  // 🍼 Fetch Mothercare Reports
   const fetchProductReports = async () => {
     try {
       let query = supabase
         .from("sales")
         .select("*, products(product_name, unit_price, quantity)");
-      if (startDate && endDate) {
-        query = query.gte("created_at", startDate).lte("created_at", endDate);
-      }
+      if (startDate && endDate) query = query.gte("created_at", startDate).lte("created_at", endDate);
       const { data: sales, error } = await query;
       if (error) throw error;
 
@@ -78,13 +76,10 @@ const Reports = () => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      const { data: products, error: stockError } = await supabase
-        .from("products")
-        .select("quantity");
+      const { data: products, error: stockError } = await supabase.from("products").select("quantity");
       if (stockError) throw stockError;
 
       const remainingStock = products.reduce((sum: number, p: any) => sum + p.quantity, 0);
-
       setProductSummary({ totalRevenue, totalSales, topProducts, remainingStock });
     } catch (err: any) {
       console.error(err);
@@ -96,9 +91,7 @@ const Reports = () => {
   const fetchKitchenReports = async () => {
     try {
       let query = supabase.from("food_sales").select("*");
-      if (startDate && endDate) {
-        query = query.gte("created_at", startDate).lte("created_at", endDate);
-      }
+      if (startDate && endDate) query = query.gte("created_at", startDate).lte("created_at", endDate);
       const { data: foodSales, error } = await query;
       if (error) throw error;
 
@@ -152,7 +145,7 @@ const Reports = () => {
     setEndDate(end || "");
   };
 
-  // ✅ Add Report Function
+  // ✅ Add Report
   const handleAddReport = async () => {
     try {
       const tableName = activeTab === "mothercare" ? "reports" : "kitchen_reports";
@@ -168,8 +161,7 @@ const Reports = () => {
       toast.success(`✅ ${activeTab === "mothercare" ? "Mothercare" : "Kitchen"} report added!`);
       setOpenDialog(false);
       setForm({ date: "", totalRevenue: "", totalSales: "", notes: "" });
-      if (activeTab === "mothercare") fetchProductReports();
-      else fetchKitchenReports();
+      activeTab === "mothercare" ? fetchProductReports() : fetchKitchenReports();
     } catch (err: any) {
       toast.error("❌ Failed to add report: " + err.message);
     }
@@ -194,14 +186,15 @@ const Reports = () => {
   return (
     <div className="space-y-8 px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold">Reports</h1>
           <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            Switch between Mothercare 🍼 and Kitchen 🍳 summaries
+            Monitor and compare sales performance across Mothercare 🍼 and Kitchen 🍳 departments.
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+
+        <div className="flex flex-row lg:flex-col lg:items-end gap-2 flex-wrap lg:flex-nowrap">
           <Button
             variant={activeTab === "mothercare" ? "default" : "outline"}
             onClick={() => setActiveTab("mothercare")}
@@ -224,23 +217,24 @@ const Reports = () => {
         <Button onClick={() => handleDateRange("month")}>This Month</Button>
       </div>
 
-      {/* 🍼 Mothercare Section */}
+      {/* Mothercare Section */}
       {activeTab === "mothercare" && (
-        <>
+        <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">🍼 Mothercare Report</h2>
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
               <DialogTrigger asChild>
-                <Button className="gap-2"><Plus className="h-4 w-4" /> Add Report</Button>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" /> Add Report
+                </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
                 <DialogHeader>
                   <DialogTitle>Add Mothercare Report</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3 py-2">
                   <Input
                     type="date"
-                    placeholder="Date"
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })}
                   />
@@ -261,31 +255,34 @@ const Reports = () => {
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   />
-                  <Button className="w-full" onClick={handleAddReport}>Save Report</Button>
+                  <Button className="w-full" onClick={handleAddReport}>
+                    Save Report
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
-        </>
+        </div>
       )}
 
-      {/* 🍳 Kitchen Section */}
+      {/* Kitchen Section */}
       {activeTab === "kitchen" && (
-        <>
+        <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">🍳 Kitchen Report</h2>
             <Dialog open={openDialog} onOpenChange={setOpenDialog}>
               <DialogTrigger asChild>
-                <Button className="gap-2"><Plus className="h-4 w-4" /> Add Report</Button>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" /> Add Report
+                </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
                 <DialogHeader>
                   <DialogTitle>Add Kitchen Report</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3 py-2">
                   <Input
                     type="date"
-                    placeholder="Date"
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })}
                   />
@@ -306,12 +303,14 @@ const Reports = () => {
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   />
-                  <Button className="w-full" onClick={handleAddReport}>Save Report</Button>
+                  <Button className="w-full" onClick={handleAddReport}>
+                    Save Report
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

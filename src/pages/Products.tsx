@@ -14,14 +14,7 @@ import { Plus, Search, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +22,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 
 const Products = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,11 +160,15 @@ const Products = () => {
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Products
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 leading-snug">
-            Manage your product inventory 🧾
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+            Comprehensive Product Management
+          </p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
+            Add, edit, and monitor your product inventory in real time.
           </p>
         </div>
 
+        {/* Add Product Button */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base">
@@ -244,10 +240,12 @@ const Products = () => {
       </div>
 
       {/* ✅ Product List Section */}
-      <Card className="shadow-card">
+      <Card className="shadow-sm rounded-xl">
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Product List</CardTitle>
-          <div className="relative mt-4">
+          <CardTitle className="text-base sm:text-lg font-semibold">
+            Product List
+          </CardTitle>
+          <div className="relative mt-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search products..."
@@ -278,7 +276,9 @@ const Products = () => {
                     className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                   >
                     <td className="p-3 w-[25%]">{p.product_name}</td>
-                    <td className="p-3 w-[20%]">{p.categories?.name || "—"}</td>
+                    <td className="p-3 w-[20%]">
+                      {p.categories?.name || "—"}
+                    </td>
                     <td className="p-3 w-[10%] text-center">{p.quantity}</td>
                     <td className="p-3 w-[15%] text-right">
                       ₵{p.unit_price.toFixed(2)}

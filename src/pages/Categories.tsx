@@ -19,16 +19,17 @@ export default function Categories() {
   const [showEdit, setShowEdit] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
 
-  // ✅ Fetch categories from Supabase
+  // ✅ Fetch categories (sorted alphabetically, case-insensitive)
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("created_at", { ascending: true });
+      const { data, error } = await supabase.from("categories").select("*");
       if (error) throw error;
-      return data;
+
+      // Case-insensitive A–Z sorting
+      return (data || []).sort((a, b) =>
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+      );
     },
   });
 
@@ -43,13 +44,17 @@ export default function Categories() {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       setShowAdd(false);
     },
-    onError: (err: any) => toast.error("❌ Failed to add category: " + err.message),
+    onError: (err: any) =>
+      toast.error("❌ Failed to add category: " + err.message),
   });
 
   // ✅ Edit category
   const editCategoryMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const { error } = await supabase.from("categories").update({ name }).eq("id", id);
+      const { error } = await supabase
+        .from("categories")
+        .update({ name })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -76,25 +81,30 @@ export default function Categories() {
   return (
     <div className="space-y-6 px-3 sm:px-6">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap sm:flex-nowrap">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Categories</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1 mb-8 leading-snug break-words">
-            Organize your products into clean,<br className="block sm:hidden" /> structured categories
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+            Categories
+          </h1>
+          <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+            Structured Category Management
+          </p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
+            Organize and maintain your product categories efficiently.
           </p>
         </div>
 
         <Button
           onClick={() => setShowAdd(true)}
-          className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3 mt-1 sm:mt-0"
+          className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3"
         >
           <Plus className="h-4 w-4" /> Add Category
         </Button>
       </div>
 
-      {/* Summary */}
+      {/* Summary Card */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <Card className="p-4 sm:p-6 rounded-xl shadow-md flex flex-col items-center justify-center">
+        <Card className="p-4 sm:p-6 rounded-xl shadow-sm flex flex-col items-center justify-center">
           <h3 className="text-xs sm:text-sm text-gray-500 font-medium">
             Total Categories
           </h3>
@@ -105,9 +115,11 @@ export default function Categories() {
       </div>
 
       {/* Categories Table */}
-      <Card className="shadow-card">
+      <Card className="shadow-sm rounded-xl">
         <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Category List</CardTitle>
+          <CardTitle className="text-base sm:text-lg font-semibold">
+            Category List
+          </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto px-0">
           {categories.length > 0 ? (
@@ -122,7 +134,7 @@ export default function Categories() {
                 {categories.map((cat: any) => (
                   <tr
                     key={cat.id}
-                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                    className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <td className="py-3 px-4">{cat.name}</td>
                     <td className="py-3 px-4 text-right">
@@ -169,7 +181,8 @@ export default function Categories() {
             onSubmit={(e) => {
               e.preventDefault();
               const form = e.target as HTMLFormElement;
-              const name = (form.name as any).value;
+              const name = (form.name as any).value.trim();
+              if (!name) return toast.error("Name cannot be empty.");
               addCategoryMutation.mutate(name);
               form.reset();
             }}
@@ -201,7 +214,8 @@ export default function Categories() {
               onSubmit={(e) => {
                 e.preventDefault();
                 const form = e.target as HTMLFormElement;
-                const name = (form.name as any).value;
+                const name = (form.name as any).value.trim();
+                if (!name) return toast.error("Name cannot be empty.");
                 editCategoryMutation.mutate({
                   id: selectedCategory.id,
                   name,
@@ -224,7 +238,9 @@ export default function Categories() {
                 className="w-full py-3 text-base"
                 disabled={editCategoryMutation.isPending}
               >
-                {editCategoryMutation.isPending ? "Updating..." : "Update Category"}
+                {editCategoryMutation.isPending
+                  ? "Updating..."
+                  : "Update Category"}
               </Button>
             </form>
           )}
