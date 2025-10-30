@@ -27,6 +27,22 @@ const Auth = () => {
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
+  // ✅ Forgot password handler
+  const handleForgotPassword = async () => {
+    const email = prompt("Enter your email to reset your password:");
+    if (!email) return;
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("A password reset link has been sent to your email.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset link");
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
@@ -38,12 +54,12 @@ const Auth = () => {
         signInSchema.parse(data);
 
         // 👇 Dynamic Supabase persistence
-        const { data: loginData, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email: data.email as string,
           password: data.password as string,
           options: {
             shouldCreateUser: false,
-            persistSession: rememberMe, // stay logged in only if checked
+            persistSession: rememberMe,
             storage: rememberMe ? localStorage : sessionStorage,
           },
         });
@@ -90,7 +106,7 @@ const Auth = () => {
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -25 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             className="relative z-10 w-[90%] max-w-md bg-white/95 rounded-2xl p-8 md:p-10 shadow-[0_0_25px_#00FFFF55] flex flex-col items-center text-center backdrop-blur-md"
           >
             <img
@@ -139,7 +155,10 @@ const Auth = () => {
                   />
                   Remember me
                 </label>
-                <span className="cursor-pointer text-cyan-500 hover:underline">
+                <span
+                  onClick={handleForgotPassword}
+                  className="cursor-pointer text-cyan-500 hover:underline"
+                >
                   Forgot password?
                 </span>
               </div>
@@ -169,7 +188,7 @@ const Auth = () => {
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -25 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             className="relative z-10 w-[90%] max-w-md bg-white/95 rounded-2xl p-8 md:p-10 shadow-[0_0_25px_#00FFFF55] flex flex-col items-center text-center backdrop-blur-md"
           >
             <img
