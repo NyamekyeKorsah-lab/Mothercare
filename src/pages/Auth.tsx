@@ -1,195 +1,244 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Mail, Lock, User } from "lucide-react";
 import { toast } from "sonner";
-import { Baby } from "lucide-react";
 import { z } from "zod";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const signInSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Invalid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const signUpSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
   username: z.string().min(3, "Username must be at least 3 characters"),
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const Auth = () => {
-  const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
 
-  // Redirect if already logged in
-  if (user) {
-    navigate("/");
-    return null;
-  }
-
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-
     const formData = new FormData(e.currentTarget);
-    const data = {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    };
+    const data = Object.fromEntries(formData);
 
     try {
-      signInSchema.parse(data);
-      const { error } = await signIn(data.email, data.password);
-      
-      if (error) {
-        toast.error(error.message);
-      } else {
+      if (mode === "login") {
+        signInSchema.parse(data);
+
+        // 👇 Dynamic Supabase persistence
+        const { data: loginData, error } = await supabase.auth.signInWithPassword({
+          email: data.email as string,
+          password: data.password as string,
+          options: {
+            shouldCreateUser: false,
+            persistSession: rememberMe, // stay logged in only if checked
+            storage: rememberMe ? localStorage : sessionStorage,
+          },
+        });
+
+        if (error) throw error;
         toast.success("Welcome back!");
         navigate("/");
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const data = {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-      username: formData.get("username") as string,
-      fullName: formData.get("fullName") as string,
-    };
-
-    try {
-      signUpSchema.parse(data);
-      const { error } = await signUp(data.email, data.password, data.username, data.fullName);
-      
-      if (error) {
-        toast.error(error.message);
       } else {
+        signUpSchema.parse(data);
+
+        const { error } = await signUp(
+          data.email as string,
+          data.password as string,
+          data.username as string
+        );
+
+        if (error) throw error;
         toast.success("Account created successfully!");
         navigate("/");
       }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
-      }
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 gradient-primary">
-      <Card className="w-full max-w-md shadow-card">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-            <Baby className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <div>
-            <CardTitle className="text-2xl">Mothercare Inventory</CardTitle>
-            <CardDescription>Manage your store with ease</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    required
+    <div className="relative flex items-center justify-center min-h-screen overflow-hidden">
+      {/* Background video */}
+      <video
+        className="absolute inset-0 w-full h-full object-cover"
+        src="/videos/auth-bg.mp4"
+        autoPlay
+        loop
+        muted
+      />
+      <div className="absolute inset-0 bg-[#00131a]/70 backdrop-blur-sm" />
+
+      <AnimatePresence mode="wait">
+        {mode === "login" ? (
+          <motion.div
+            key="login"
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -25 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="relative z-10 w-[90%] max-w-md bg-white/95 rounded-2xl p-8 md:p-10 shadow-[0_0_25px_#00FFFF55] flex flex-col items-center text-center backdrop-blur-md"
+          >
+            <img
+              src="/logo.png"
+              alt="Mount Carmel Logo"
+              className="h-20 w-auto mb-3"
+            />
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+              Welcome Back
+            </h2>
+            <p className="text-sm md:text-base text-gray-500 mb-6">
+              Log in to continue to your dashboard.
+            </p>
+
+            <form onSubmit={handleAuth} className="w-full space-y-6">
+              <div className="relative">
+                <Input
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  className="bg-transparent border-0 border-b-2 border-cyan-400 pl-3 pr-10 text-gray-800 rounded-none focus-visible:ring-0 focus:border-cyan-500"
+                  required
+                />
+                <Mail className="absolute right-2 top-2.5 h-4 w-4 text-cyan-500" />
+              </div>
+
+              <div className="relative">
+                <Input
+                  name="password"
+                  type="password"
+                  placeholder="Password"
+                  className="bg-transparent border-0 border-b-2 border-cyan-400 pl-3 pr-10 text-gray-800 rounded-none focus-visible:ring-0 focus:border-cyan-500"
+                  required
+                />
+                <Lock className="absolute right-2 top-2.5 h-4 w-4 text-cyan-500" />
+              </div>
+
+              {/* Remember me + Forgot password */}
+              <div className="flex items-center justify-between text-xs md:text-sm text-gray-600">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="accent-cyan-500"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign In"}
-                </Button>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-fullname">Full Name</Label>
-                  <Input
-                    id="signup-fullname"
-                    name="fullName"
-                    type="text"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-username">Username</Label>
-                  <Input
-                    id="signup-username"
-                    name="username"
-                    type="text"
-                    placeholder="johndoe"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating account..." : "Sign Up"}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                  Remember me
+                </label>
+                <span className="cursor-pointer text-cyan-500 hover:underline">
+                  Forgot password?
+                </span>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-4 bg-gradient-to-r from-cyan-500 to-teal-400 text-black font-semibold rounded-full shadow-[0_0_15px_#00FFFFAA] hover:shadow-[0_0_25px_#00FFFF] transition-all duration-300"
+              >
+                {isLoading ? "Signing in..." : "Login"}
+              </Button>
+            </form>
+
+            <p className="mt-6 text-xs md:text-sm text-gray-500">
+              Don’t have an account?{" "}
+              <button
+                onClick={() => setMode("signup")}
+                className="text-cyan-500 hover:underline"
+              >
+                Sign up
+              </button>
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="signup"
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -25 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="relative z-10 w-[90%] max-w-md bg-white/95 rounded-2xl p-8 md:p-10 shadow-[0_0_25px_#00FFFF55] flex flex-col items-center text-center backdrop-blur-md"
+          >
+            <img
+              src="/logo.png"
+              alt="Mount Carmel Logo"
+              className="h-20 w-auto mb-3"
+            />
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+              Welcome
+            </h2>
+            <p className="text-sm md:text-base text-gray-500 mb-6">
+              Create your account to get started.
+            </p>
+
+            <form onSubmit={handleAuth} className="w-full space-y-6">
+              <div className="relative">
+                <Input
+                  name="username"
+                  type="text"
+                  placeholder="Username"
+                  className="bg-transparent border-0 border-b-2 border-cyan-400 pl-3 pr-10 text-gray-800 rounded-none focus-visible:ring-0 focus:border-cyan-500"
+                  required
+                />
+                <User className="absolute right-2 top-2.5 h-4 w-4 text-cyan-500" />
+              </div>
+
+              <div className="relative">
+                <Input
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  className="bg-transparent border-0 border-b-2 border-cyan-400 pl-3 pr-10 text-gray-800 rounded-none focus-visible:ring-0 focus:border-cyan-500"
+                  required
+                />
+                <Mail className="absolute right-2 top-2.5 h-4 w-4 text-cyan-500" />
+              </div>
+
+              <div className="relative">
+                <Input
+                  name="password"
+                  type="password"
+                  placeholder="Password"
+                  className="bg-transparent border-0 border-b-2 border-cyan-400 pl-3 pr-10 text-gray-800 rounded-none focus-visible:ring-0 focus:border-cyan-500"
+                  required
+                />
+                <Lock className="absolute right-2 top-2.5 h-4 w-4 text-cyan-500" />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-4 bg-gradient-to-r from-cyan-500 to-teal-400 text-black font-semibold rounded-full shadow-[0_0_15px_#00FFFFAA] hover:shadow-[0_0_25px_#00FFFF] transition-all duration-300"
+              >
+                {isLoading ? "Creating..." : "Sign Up"}
+              </Button>
+            </form>
+
+            <p className="mt-6 text-xs md:text-sm text-gray-500">
+              Already have an account?{" "}
+              <button
+                onClick={() => setMode("login")}
+                className="text-cyan-500 hover:underline"
+              >
+                Login
+              </button>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

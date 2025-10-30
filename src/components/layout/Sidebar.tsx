@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -10,9 +10,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Sidebar = ({ onLinkClick }: { onLinkClick?: () => void }) => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navItems = [
     { name: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -22,6 +25,16 @@ export const Sidebar = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     { name: "Food Sales", path: "/foodsales", icon: Utensils },
     { name: "Reports", path: "/reports", icon: BarChart2 },
   ];
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("❌ Failed to sign out: " + error.message);
+    } else {
+      toast.success("✅ Signed out successfully!");
+      navigate("/"); // redirect to homepage or login
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-white text-gray-800 border-r border-gray-200">
@@ -76,6 +89,7 @@ export const Sidebar = ({ onLinkClick }: { onLinkClick?: () => void }) => {
         <Button
           variant="ghost"
           className="w-full justify-start text-red-600 hover:bg-gray-100"
+          onClick={handleSignOut}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Sign Out
