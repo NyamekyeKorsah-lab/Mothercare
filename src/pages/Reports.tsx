@@ -1,32 +1,16 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Download, Plus } from "lucide-react";
+import { Download } from "lucide-react";
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState<"mothercare" | "kitchen">("mothercare");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [openDialog, setOpenDialog] = useState(false);
   const [lastUpdated, setLastUpdated] = useState("");
-
-  const [form, setForm] = useState({
-    date: "",
-    totalRevenue: "",
-    totalSales: "",
-    notes: "",
-  });
 
   const [productSummary, setProductSummary] = useState({
     totalRevenue: 0,
@@ -41,6 +25,24 @@ const Reports = () => {
     topFoods: [] as { name: string; count: number }[],
   });
 
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
+  const APPROVED_USER = "jadidianyamekyekorsah@gmail.com"; // ✅ Only your boss
+
+  // 🔒 Check access
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      const currentUser = data?.user;
+      setUser(currentUser);
+
+      if (!currentUser || currentUser.email !== APPROVED_USER) {
+        navigate("/"); // 🚫 redirect unapproved users
+      }
+    };
+    checkUser();
+  }, [navigate]);
+
   useEffect(() => {
     if (activeTab === "mothercare") fetchProductReports();
     else fetchKitchenReports();
@@ -53,7 +55,8 @@ const Reports = () => {
       let query = supabase
         .from("sales")
         .select("*, products(product_name, unit_price, quantity)");
-      if (startDate && endDate) query = query.gte("created_at", startDate).lte("created_at", endDate);
+      if (startDate && endDate)
+        query = query.gte("created_at", startDate).lte("created_at", endDate);
       const { data: sales, error } = await query;
       if (error) throw error;
 
@@ -62,7 +65,7 @@ const Reports = () => {
         return;
       }
 
-      const totalRevenue = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+      const totalRevenue = sales.reduce((sum, s) => sum + (s.total_price || 0), 0);
       const totalSales = sales.length;
 
       const productCounts: Record<string, number> = {};
@@ -78,7 +81,9 @@ const Reports = () => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      const { data: products, error: stockError } = await supabase.from("products").select("quantity");
+      const { data: products, error: stockError } = await supabase
+        .from("products")
+        .select("quantity");
       if (stockError) throw stockError;
 
       const remainingStock = products.reduce((sum: number, p: any) => sum + p.quantity, 0);
@@ -93,7 +98,8 @@ const Reports = () => {
   const fetchKitchenReports = async () => {
     try {
       let query = supabase.from("food_sales").select("*");
-      if (startDate && endDate) query = query.gte("created_at", startDate).lte("created_at", endDate);
+      if (startDate && endDate)
+        query = query.gte("created_at", startDate).lte("created_at", endDate);
       const { data: foodSales, error } = await query;
       if (error) throw error;
 
@@ -147,28 +153,6 @@ const Reports = () => {
     setEndDate(end || "");
   };
 
-  // ✅ Add Report
-  const handleAddReport = async () => {
-    try {
-      const tableName = activeTab === "mothercare" ? "reports" : "kitchen_reports";
-      const { error } = await supabase.from(tableName).insert([
-        {
-          date: form.date,
-          total_revenue: Number(form.totalRevenue),
-          total_sales: Number(form.totalSales),
-          notes: form.notes,
-        },
-      ]);
-      if (error) throw error;
-      toast.success(`✅ ${activeTab === "mothercare" ? "Mothercare" : "Kitchen"} report added!`);
-      setOpenDialog(false);
-      setForm({ date: "", totalRevenue: "", totalSales: "", notes: "" });
-      activeTab === "mothercare" ? fetchProductReports() : fetchKitchenReports();
-    } catch (err: any) {
-      toast.error("❌ Failed to add report: " + err.message);
-    }
-  };
-
   const exportToCSV = (title: string, data: any[]) => {
     const csvContent = [
       [`${title}`],
@@ -185,6 +169,8 @@ const Reports = () => {
     link.click();
   };
 
+  if (!user || user.email !== APPROVED_USER) return null;
+
   return (
     <div className="space-y-8 px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -192,7 +178,7 @@ const Reports = () => {
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold">Reports</h1>
           <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            Monitor and compare performance across Mothercare 🍼 and Kitchen 🍳
+            Performance overview across Mothercare 🍼 and Kitchen 🍳
           </p>
           <p className="text-xs text-muted-foreground italic mt-1">
             Last updated: {lastUpdated}
@@ -227,53 +213,14 @@ const Reports = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">🍼 Mothercare Report</h2>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => exportToCSV("Mothercare Top Products", productSummary.topProducts)}
-              >
-                <Download className="h-4 w-4 mr-1" /> Export
-              </Button>
-              <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" /> Add Report
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
-                  <DialogHeader>
-                    <DialogTitle>Add Mothercare Report</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3 py-2">
-                    <Input
-                      type="date"
-                      value={form.date}
-                      onChange={(e) => setForm({ ...form, date: e.target.value })}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Total Revenue (₵)"
-                      value={form.totalRevenue}
-                      onChange={(e) => setForm({ ...form, totalRevenue: e.target.value })}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Total Sales"
-                      value={form.totalSales}
-                      onChange={(e) => setForm({ ...form, totalSales: e.target.value })}
-                    />
-                    <Textarea
-                      placeholder="Notes (optional)"
-                      value={form.notes}
-                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    />
-                    <Button className="w-full" onClick={handleAddReport}>
-                      Save Report
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() =>
+                exportToCSV("Mothercare Top Products", productSummary.topProducts)
+              }
+            >
+              <Download className="h-4 w-4 mr-1" /> Export
+            </Button>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -323,53 +270,12 @@ const Reports = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">🍳 Kitchen Report</h2>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => exportToCSV("Kitchen Top Foods", kitchenSummary.topFoods)}
-              >
-                <Download className="h-4 w-4 mr-1" /> Export
-              </Button>
-              <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" /> Add Report
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
-                  <DialogHeader>
-                    <DialogTitle>Add Kitchen Report</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3 py-2">
-                    <Input
-                      type="date"
-                      value={form.date}
-                      onChange={(e) => setForm({ ...form, date: e.target.value })}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Total Revenue (₵)"
-                      value={form.totalRevenue}
-                      onChange={(e) => setForm({ ...form, totalRevenue: e.target.value })}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Total Sales"
-                      value={form.totalSales}
-                      onChange={(e) => setForm({ ...form, totalSales: e.target.value })}
-                    />
-                    <Textarea
-                      placeholder="Notes (optional)"
-                      value={form.notes}
-                      onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    />
-                    <Button className="w-full" onClick={handleAddReport}>
-                      Save Report
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => exportToCSV("Kitchen Top Foods", kitchenSummary.topFoods)}
+            >
+              <Download className="h-4 w-4 mr-1" /> Export
+            </Button>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

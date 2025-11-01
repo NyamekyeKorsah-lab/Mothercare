@@ -37,6 +37,18 @@ const Products = () => {
   const [reorderLevel, setReorderLevel] = useState<string>("5");
   const [categoryId, setCategoryId] = useState<string>("");
 
+  // ✅ Track logged-in user
+  const [user, setUser] = useState<any>(null);
+  const APPROVED_USER = "jadidianyamekyekorsah@gmail.com"; // your admin email
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    getUser();
+  }, []);
+
   // ✅ Fetch products
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
@@ -63,14 +75,14 @@ const Products = () => {
     },
   });
 
-  // ✅ Auto status update logic
+  // ✅ Status logic
   const getStatus = (qty: number, reorder: number) => {
     if (qty <= 0) return "Out of Stock";
     if (qty <= reorder) return "Low Stock";
     return "In Stock";
   };
 
-  // ✅ Add Product
+  // ✅ Add product
   const addProductMutation = useMutation({
     mutationFn: async () => {
       const qty = Number(quantity) || 0;
@@ -99,7 +111,7 @@ const Products = () => {
       toast.error("❌ Failed to add product: " + err.message),
   });
 
-  // ✅ Edit Product
+  // ✅ Edit product
   const editProductMutation = useMutation({
     mutationFn: async () => {
       if (!editingProduct) return;
@@ -161,12 +173,6 @@ const Products = () => {
 
   return (
     <div className="space-y-6 px-3 sm:px-6">
-      {/* Breadcrumb */}
-      <nav className="text-xs sm:text-sm text-muted-foreground mb-2">
-        <span className="hover:text-primary cursor-pointer">Home</span> ›{" "}
-        <span className="text-foreground font-medium">Products</span>
-      </nav>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
         <div>
@@ -176,86 +182,85 @@ const Products = () => {
           <p className="text-muted-foreground text-xs sm:text-sm mt-1">
             Comprehensive Product Management
           </p>
-          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
-            Add, edit, and monitor your product inventory in real time.
-          </p>
           <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 italic">
             Last updated: {lastUpdated}
           </p>
         </div>
 
-        {/* Add Product Button */}
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base hover:scale-[1.02] transition-all duration-200">
-              <Plus className="h-4 w-4 mr-1" /> Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <Label>Product Name</Label>
-              <Input
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-              />
-
-              <Label>Category</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.length ? (
-                    categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>
-                      No categories available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-
-              <Label>Unit Price (₵)</Label>
-              <Input
-                type="number"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
-              />
-
-              <Label>Reorder Level</Label>
-              <Input
-                type="number"
-                value={reorderLevel}
-                onChange={(e) => setReorderLevel(e.target.value)}
-              />
-
-              <Button
-                className="w-full mt-2"
-                onClick={() => addProductMutation.mutate()}
-                disabled={addProductMutation.isPending}
-              >
-                {addProductMutation.isPending ? "Saving..." : "Save Product"}
+        {/* ✅ Add Product Button visible only to admin */}
+        {user?.email === APPROVED_USER && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base hover:scale-[1.02] transition-all duration-200">
+                <Plus className="h-4 w-4 mr-1" /> Add Product
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add New Product</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                <Label>Product Name</Label>
+                <Input
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                />
+
+                <Label>Category</Label>
+                <Select value={categoryId} onValueChange={setCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.length ? (
+                      categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>
+                        No categories available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+
+                <Label>Unit Price (₵)</Label>
+                <Input
+                  type="number"
+                  value={unitPrice}
+                  onChange={(e) => setUnitPrice(e.target.value)}
+                />
+
+                <Label>Reorder Level</Label>
+                <Input
+                  type="number"
+                  value={reorderLevel}
+                  onChange={(e) => setReorderLevel(e.target.value)}
+                />
+
+                <Button
+                  className="w-full mt-2"
+                  onClick={() => addProductMutation.mutate()}
+                  disabled={addProductMutation.isPending}
+                >
+                  {addProductMutation.isPending ? "Saving..." : "Save Product"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      {/* ✅ Product List Section */}
+      {/* ✅ Product List */}
       <Card className="shadow-md rounded-xl border border-gray-100 hover:shadow-lg transition-all duration-200">
         <CardHeader>
           <CardTitle className="text-base sm:text-lg font-semibold">
@@ -282,7 +287,9 @@ const Products = () => {
                   <th className="p-3 w-[10%] text-center">Qty</th>
                   <th className="p-3 w-[15%] text-right">Price</th>
                   <th className="p-3 w-[15%] text-center">Status</th>
-                  <th className="p-3 w-[15%] text-right">Actions</th>
+                  {user?.email === APPROVED_USER && (
+                    <th className="p-3 w-[15%] text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -314,16 +321,20 @@ const Products = () => {
                         </Badge>
                       )}
                     </td>
-                    <td className="p-3 w-[15%] text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditClick(p)}
-                        className="hover:scale-[1.05] transition-all duration-200"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </td>
+
+                    {/* ✅ Edit button only for approved user */}
+                    {user?.email === APPROVED_USER && (
+                      <td className="p-3 w-[15%] text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditClick(p)}
+                          className="hover:scale-[1.05] transition-all duration-200"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -336,7 +347,7 @@ const Products = () => {
         </CardContent>
       </Card>
 
-      {/* ✏️ Edit Product Dialog */}
+      {/* ✏️ Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-md sm:rounded-lg sm:max-h-[90vh] overflow-y-auto">
           <DialogHeader>

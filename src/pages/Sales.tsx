@@ -30,6 +30,8 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 2,
   }).format(amount);
 
+const APPROVED_USER = "jadidianyamekyekorsah@gmail.com"; // ✅ added restriction email
+
 const Sales = () => {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
@@ -38,6 +40,16 @@ const Sales = () => {
   const [total, setTotal] = useState<number | "">("");
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [user, setUser] = useState<any>(null); // ✅ added user state
+
+  // ✅ Fetch current user
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user || null);
+    };
+    getUser();
+  }, []);
 
   const fetchCurrentSession = async () => {
     const { data, error } = await supabase
@@ -191,124 +203,131 @@ const Sales = () => {
           </p>
         </div>
 
-        <div className="flex flex-row lg:flex-col lg:items-end gap-2 flex-wrap lg:flex-nowrap">
-          <Button onClick={handleMakeAccount} variant="outline">
-            Make Account
-          </Button>
+        {/* ✅ Restrict access to Add and Make Account */}
+        {user?.email === APPROVED_USER && (
+          <div className="flex flex-row lg:flex-col lg:items-end gap-2 flex-wrap lg:flex-nowrap">
+            <Button onClick={handleMakeAccount} variant="outline">
+              Make Account
+            </Button>
 
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="secondary"
-                className="bg-rose-200 text-black hover:bg-rose-300"
-              >
-                📜 View Old Sales
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Previous Account Sessions</DialogTitle>
-              </DialogHeader>
-              <OldSalesList currentSessionId={currentSession?.id} />
-            </DialogContent>
-          </Dialog>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="secondary"
+                  className="bg-rose-200 text-black hover:bg-rose-300"
+                >
+                  📜 View Old Sales
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl w-[95vw] max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Previous Account Sessions</DialogTitle>
+                </DialogHeader>
+                <OldSalesList currentSessionId={currentSession?.id} />
+              </DialogContent>
+            </Dialog>
 
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" /> Add Sale
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
-              <DialogHeader>
-                <DialogTitle>Add New Sale</DialogTitle>
-              </DialogHeader>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!selectedProduct || !quantity) {
-                    toast.error("⚠️ Select a product and quantity.");
-                    return;
-                  }
-                  addSaleMutation.mutate({
-                    product_id: selectedProduct.id,
-                    quantity_sold: Number(quantity),
-                    total_price: Number(total),
-                  });
-                }}
-                className="space-y-4 py-2"
-              >
-                <div>
-                  <Label>Product</Label>
-                  <Select
-                    onValueChange={(val) => {
-                      const selected = products.find((p) => p.id === val);
-                      setSelectedProduct(selected);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((p) =>
-                        p.status === "Out of Stock" || p.quantity <= 0 ? (
-                          <SelectItem key={p.id} value={p.id} disabled>
-                            {p.product_name} — Out of Stock
-                          </SelectItem>
-                        ) : (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.product_name}
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Category</Label>
-                  <Input
-                    disabled
-                    value={selectedProduct?.categories?.name || ""}
-                    placeholder="Auto-filled"
-                  />
-                </div>
-
-                <div>
-                  <Label>Quantity Sold</Label>
-                  <Input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) =>
-                      setQuantity(e.target.value ? Number(e.target.value) : "")
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" /> Add Sale
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-lg">
+                <DialogHeader>
+                  <DialogTitle>Add New Sale</DialogTitle>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!selectedProduct || !quantity) {
+                      toast.error("⚠️ Select a product and quantity.");
+                      return;
                     }
-                    placeholder="Enter quantity"
-                  />
-                </div>
+                    addSaleMutation.mutate({
+                      product_id: selectedProduct.id,
+                      quantity_sold: Number(quantity),
+                      total_price: Number(total),
+                    });
+                  }}
+                  className="space-y-4 py-2"
+                >
+                  <div>
+                    <Label>Product</Label>
+                    <Select
+                      onValueChange={(val) => {
+                        const selected = products.find((p) => p.id === val);
+                        setSelectedProduct(selected);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products.map((p) =>
+                          p.status === "Out of Stock" || p.quantity <= 0 ? (
+                            <SelectItem key={p.id} value={p.id} disabled>
+                              {p.product_name} — Out of Stock
+                            </SelectItem>
+                          ) : (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.product_name}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div>
-                  <Label>Price per unit</Label>
-                  <Input
-                    disabled
-                    value={selectedProduct ? selectedProduct.unit_price : ""}
-                    placeholder="Auto-filled"
-                  />
-                </div>
+                  <div>
+                    <Label>Category</Label>
+                    <Input
+                      disabled
+                      value={selectedProduct?.categories?.name || ""}
+                      placeholder="Auto-filled"
+                    />
+                  </div>
 
-                <div>
-                  <Label>Total Price</Label>
-                  <Input disabled value={total || ""} placeholder="Auto calculated" />
-                </div>
+                  <div>
+                    <Label>Quantity Sold</Label>
+                    <Input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) =>
+                        setQuantity(e.target.value ? Number(e.target.value) : "")
+                      }
+                      placeholder="Enter quantity"
+                    />
+                  </div>
 
-                <DialogFooter>
-                  <Button type="submit" className="w-full py-3">
-                    Save Sale
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
+                  <div>
+                    <Label>Price per unit</Label>
+                    <Input
+                      disabled
+                      value={selectedProduct ? selectedProduct.unit_price : ""}
+                      placeholder="Auto-filled"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Total Price</Label>
+                    <Input
+                      disabled
+                      value={total || ""}
+                      placeholder="Auto calculated"
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="submit" className="w-full py-3">
+                      Save Sale
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
       </div>
 
       {/* Summary */}
@@ -347,7 +366,9 @@ const Sales = () => {
                   <th className="p-3">Category</th>
                   <th className="p-3 text-center">Quantity</th>
                   <th className="p-3 text-right">Total</th>
-                  <th className="p-3 text-right">Actions</th>
+                  {user?.email === APPROVED_USER && (
+                    <th className="p-3 text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -366,15 +387,17 @@ const Sales = () => {
                     <td className="p-3 text-right">
                       {formatCurrency(sale.total_price)}
                     </td>
-                    <td className="p-3 text-right">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => deleteSaleMutation.mutate(sale.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
+                    {user?.email === APPROVED_USER && (
+                      <td className="p-3 text-right">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteSaleMutation.mutate(sale.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

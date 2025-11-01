@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -16,14 +17,30 @@ import { toast } from "sonner";
 export const Sidebar = ({ onLinkClick }: { onLinkClick?: () => void }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
 
+  // ✅ Fetch current user
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user || null);
+    };
+    fetchUser();
+  }, []);
+
+  const APPROVED_USER = "jadidianyamekyekorsah@gmail.com"; // ✅ Only your boss
+
+  // ✅ Dynamically build nav list based on user email
   const navItems = [
     { name: "Dashboard", path: "/", icon: LayoutDashboard },
     { name: "Products", path: "/products", icon: Package },
     { name: "Categories", path: "/categories", icon: Layers },
     { name: "Sales", path: "/sales", icon: ShoppingCart },
     { name: "Food Sales", path: "/foodsales", icon: Utensils },
-    { name: "Reports", path: "/reports", icon: BarChart2 },
+    // 👇 Reports visible only to approved boss
+    ...(user?.email === APPROVED_USER
+      ? [{ name: "Reports", path: "/reports", icon: BarChart2 }]
+      : []),
   ];
 
   const handleSignOut = async () => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,14 +19,24 @@ export default function Categories() {
   const [showEdit, setShowEdit] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
 
-  // ✅ Fetch categories (sorted alphabetically, case-insensitive)
+  // ✅ Track user
+  const [user, setUser] = useState<any>(null);
+  const APPROVED_USER = "jadidianyamekyekorsah@gmail.com"; // admin email
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    };
+    getUser();
+  }, []);
+
+  // ✅ Fetch categories (sorted alphabetically)
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("*");
       if (error) throw error;
-
-      // Case-insensitive A–Z sorting
       return (data || []).sort((a, b) =>
         a.name.toLowerCase().localeCompare(b.name.toLowerCase())
       );
@@ -94,12 +104,15 @@ export default function Categories() {
           </p>
         </div>
 
-        <Button
-          onClick={() => setShowAdd(true)}
-          className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3"
-        >
-          <Plus className="h-4 w-4" /> Add Category
-        </Button>
+        {/* ✅ Add button only for admin */}
+        {user?.email === APPROVED_USER && (
+          <Button
+            onClick={() => setShowAdd(true)}
+            className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3"
+          >
+            <Plus className="h-4 w-4" /> Add Category
+          </Button>
+        )}
       </div>
 
       {/* Summary Card */}
@@ -114,7 +127,7 @@ export default function Categories() {
         </Card>
       </div>
 
-      {/* Categories Table */}
+      {/* Category List */}
       <Card className="shadow-sm rounded-xl">
         <CardHeader>
           <CardTitle className="text-base sm:text-lg font-semibold">
@@ -127,7 +140,11 @@ export default function Categories() {
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="py-3 px-4 font-semibold">Category</th>
-                  <th className="py-3 px-4 text-right font-semibold">Actions</th>
+                  {user?.email === APPROVED_USER && (
+                    <th className="py-3 px-4 text-right font-semibold">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -137,28 +154,34 @@ export default function Categories() {
                     className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <td className="py-3 px-4">{cat.name}</td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedCategory(cat);
-                            setShowEdit(true);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => deleteCategoryMutation.mutate(cat.id)}
-                          disabled={deleteCategoryMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
+
+                    {/* ✅ Actions visible only for admin */}
+                    {user?.email === APPROVED_USER && (
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedCategory(cat);
+                              setShowEdit(true);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() =>
+                              deleteCategoryMutation.mutate(cat.id)
+                            }
+                            disabled={deleteCategoryMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -246,6 +269,11 @@ export default function Categories() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <footer className="text-[11px] text-center text-muted-foreground mt-8 pb-4">
+        © {new Date().getFullYear()} Mount Carmel Inventory System
+      </footer>
     </div>
   );
 }
