@@ -5,7 +5,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
-import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableRow,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState<"mothercare" | "kitchen">("mothercare");
@@ -33,7 +42,7 @@ const Reports = () => {
     else fetchKitchenReports();
   }, [activeTab]);
 
-  // 🍼 Fetch Mothercare session-style reports
+  // 🍼 Fetch Mothercare Reports
   const fetchMothercareReports = async () => {
     try {
       const { data: sales, error } = await supabase
@@ -41,12 +50,8 @@ const Reports = () => {
         .select("*, products(product_name, unit_price)");
       if (error) throw error;
 
-      if (!sales?.length) {
-        setMothercareSessions([]);
-        return;
-      }
+      if (!sales?.length) return setMothercareSessions([]);
 
-      // Group sales by date
       const grouped: Record<string, any[]> = {};
       sales.forEach((s: any) => {
         const date = new Date(s.created_at).toLocaleDateString();
@@ -54,28 +59,24 @@ const Reports = () => {
         grouped[date].push(s);
       });
 
-      const sessions = Object.entries(grouped).map(([date, items]) => {
-        const totalRevenue = (items as any[]).reduce(
-          (sum, i) => sum + (i.total_price || 0),
-          0
-        );
-        const totalSales = (items as any[]).length;
-        return { date, items, totalRevenue, totalSales };
-      });
+      const sessions = Object.entries(grouped).map(([date, items]) => ({
+        date,
+        items,
+        totalRevenue: (items as any[]).reduce((sum, i) => sum + (i.total_price || 0), 0),
+        totalSales: (items as any[]).length,
+      }));
 
-      // Sort by most recent
       sessions.sort(
         (a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-
       setMothercareSessions(sessions);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast.error("Failed to load Mothercare reports");
     }
   };
 
-  // 🍳 Fetch Kitchen Sessions + Reports + Food Sales
+  // 🍳 Fetch Kitchen Reports
   const fetchKitchenReports = async () => {
     try {
       const { data: sessions, error } = await supabase
@@ -84,66 +85,112 @@ const Reports = () => {
         .order("accounted_date", { ascending: false });
       if (error) throw error;
 
-      const { data: reports, error: repError } = await supabase
-        .from("kitchen_reports")
-        .select("*");
-      if (repError) throw repError;
-
-      const { data: sales, error: saleError } = await supabase
-        .from("food_sales")
-        .select("*");
-      if (saleError) throw saleError;
+      const { data: reports } = await supabase.from("kitchen_reports").select("*");
+      const { data: sales } = await supabase.from("food_sales").select("*");
 
       const combined = sessions.map((s: any) => {
-        const report = reports.find((r: any) => r.session_id === s.id);
-        const sessionSales = sales.filter((f: any) => f.session_id === s.id);
+        const report = reports?.find((r: any) => r.session_id === s.id);
+        const sessionSales = sales?.filter((f: any) => f.session_id === s.id) || [];
         const totalRevenue =
           sessionSales.reduce((sum, f: any) => sum + f.price * f.quantity, 0) || 0;
-        const totalSales = sessionSales.length;
-
-        return {
-          ...s,
-          totalRevenue,
-          totalSales,
-          report,
-          sales: sessionSales,
-        };
+        return { ...s, totalRevenue, totalSales: sessionSales.length, report, sales: sessionSales };
       });
 
       setKitchenSessions(combined);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast.error("Failed to load kitchen reports");
     }
   };
 
-  // 💾 Export CSV
-  const exportToCSV = (title: string, data: any[], type: "mothercare" | "kitchen") => {
-    const csv =
-      type === "mothercare"
-        ? [
-            [title],
-            ["Product Name", "Quantity", "Unit Price", "Total"],
-            ...data.map((i) => [
+  // 📄 Export PDF (Fixed logo + Ghana cedi formatting)
+  const exportToPDF = (title: string, data: any[], type: "mothercare" | "kitchen") => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // ✅ Working base64 PNG logo (replace with your uploaded one if preferred)
+      const base64Logo =
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAAADhCAYAAAA6S3XhAAABRUlEQVR4nO3RMQ0AAAwCoNm/9F2hgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwCUMAAQAB7m7lHQAAAABJRU5ErkJggg==";
+
+      // 🖼 Safely add logo
+      const imgWidth = 35;
+      const imgX = (pageWidth - imgWidth) / 2;
+      try {
+        doc.addImage(base64Logo, "PNG", imgX, 10, imgWidth, 30);
+      } catch (e) {
+        console.warn("Logo skipped:", e);
+      }
+
+      // 🏷 Header text
+      doc.setFontSize(16);
+      doc.text("Mount Carmel Mothercare & Kitchen", pageWidth / 2, 48, { align: "center" });
+      doc.setFontSize(11);
+      doc.text(
+        `Report Type: ${type === "mothercare" ? "Mothercare 🍼" : "Kitchen 🍳"}`,
+        pageWidth / 2,
+        56,
+        { align: "center" }
+      );
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, 62, {
+        align: "center",
+      });
+
+      // 🧾 Table setup
+      const headers =
+        type === "mothercare"
+          ? [["#", "Product", "Qty", "Unit Price (₵)", "Total (₵)"]]
+          : [["#", "Food Name", "Qty", "Price (₵)", "Total (₵)"]];
+
+      const tableData =
+        type === "mothercare"
+          ? data.map((i, index) => [
+              index + 1,
               i.products?.product_name || "Unknown",
               i.quantity,
-              i.products?.unit_price || 0,
-              i.total_price || 0,
-            ]),
-          ]
-        : [
-            [title],
-            ["Food Name", "Qty", "Price", "Total"],
-            ...data.map((i) => [i.food_name, i.quantity, i.price, i.quantity * i.price]),
-          ];
+              `₵${i.products?.unit_price?.toFixed(2) || "0.00"}`,
+              `₵${i.total_price?.toFixed(2) || "0.00"}`,
+            ])
+          : data.map((i, index) => [
+              index + 1,
+              i.food_name,
+              i.quantity,
+              `₵${i.price.toFixed(2)}`,
+              `₵${(i.price * i.quantity).toFixed(2)}`,
+            ]);
 
-    const blob = new Blob([csv.map((e) => e.join(",")).join("\n")], {
-      type: "text/csv",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${title.replace(/\s/g, "_")}.csv`;
-    link.click();
+      autoTable(doc, {
+        startY: 70,
+        head: headers,
+        body: tableData,
+        theme: "grid",
+        styles: { fontSize: 10 },
+        headStyles: {
+          fillColor: type === "mothercare" ? [241, 90, 36] : [53, 162, 235],
+        },
+        didDrawPage: () => {
+          doc.setFontSize(9);
+          doc.text(
+            `© ${new Date().getFullYear()} Mount Carmel Inventory System`,
+            pageWidth / 2,
+            doc.internal.pageSize.getHeight() - 10,
+            { align: "center" }
+          );
+        },
+      });
+
+      const total =
+        type === "mothercare"
+          ? data.reduce((sum, i) => sum + (i.total_price || 0), 0)
+          : data.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+      doc.text(`Total Revenue: ₵${total.toFixed(2)}`, 14, (doc as any).lastAutoTable.finalY + 10);
+
+      doc.save(`${title.replace(/\s/g, "_")}.pdf`);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+      toast.error("Error generating PDF. Check console for details.");
+    }
   };
 
   if (!user || user.email !== APPROVED_USER) return null;
@@ -174,7 +221,7 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* 🍼 Mothercare Sessions */}
+      {/* 🍼 Mothercare Section */}
       {activeTab === "mothercare" && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold">Mothercare Reports</h2>
@@ -183,7 +230,6 @@ const Reports = () => {
               const date = new Date(session.date);
               const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
               const formattedDate = date.toLocaleDateString();
-
               return (
                 <Card key={session.date}>
                   <CardHeader>
@@ -199,18 +245,17 @@ const Reports = () => {
                       <Button
                         variant="outline"
                         onClick={() =>
-                          exportToCSV(
+                          exportToPDF(
                             `Mothercare_Report_${dayName}_${formattedDate.replace(/\//g, "-")}`,
                             session.items,
                             "mothercare"
                           )
                         }
                       >
-                        <Download className="h-4 w-4 mr-1" /> Export
+                        <Download className="h-4 w-4 mr-1" /> Export PDF
                       </Button>
                     </div>
                   </CardHeader>
-
                   <CardContent>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                       <div>
@@ -220,7 +265,6 @@ const Reports = () => {
                         <strong>Total Sales:</strong> {session.totalSales}
                       </div>
                     </div>
-
                     {session.items.length ? (
                       <Table>
                         <TableHeader>
@@ -234,15 +278,13 @@ const Reports = () => {
                         <TableBody>
                           {session.items.map((s: any) => (
                             <TableRow key={s.id}>
-                              <TableCell>
-                                {s.products?.product_name || "Unknown"}
-                              </TableCell>
+                              <TableCell>{s.products?.product_name || "Unknown"}</TableCell>
                               <TableCell>{s.quantity}</TableCell>
                               <TableCell>
-                                {s.products?.unit_price?.toFixed(2) || "0.00"}
+                                ₵{s.products?.unit_price?.toFixed(2) || "0.00"}
                               </TableCell>
                               <TableCell>
-                                {s.total_price?.toFixed(2) || "0.00"}
+                                ₵{s.total_price?.toFixed(2) || "0.00"}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -258,25 +300,22 @@ const Reports = () => {
               );
             })
           ) : (
-            <p className="text-sm text-gray-500 text-center">
-              No Mothercare sales found.
-            </p>
+            <p className="text-sm text-gray-500 text-center">No Mothercare sales found.</p>
           )}
         </div>
       )}
 
-      {/* 🍳 Kitchen Sessions */}
+      {/* 🍳 Kitchen Section */}
       {activeTab === "kitchen" && (
         <div className="space-y-6">
           <h2 className="text-xl font-semibold">Kitchen Reports</h2>
           {kitchenSessions.length ? (
             kitchenSessions
-              .filter((session) => session.sales && session.sales.length > 0)
+              .filter((s) => s.sales?.length)
               .map((session) => {
                 const date = new Date(session.accounted_date);
                 const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
                 const formattedDate = date.toLocaleDateString();
-
                 return (
                   <Card key={session.id}>
                     <CardHeader>
@@ -292,29 +331,26 @@ const Reports = () => {
                         <Button
                           variant="outline"
                           onClick={() =>
-                            exportToCSV(
+                            exportToPDF(
                               `Kitchen_Report_${dayName}_${formattedDate.replace(/\//g, "-")}`,
                               session.sales,
                               "kitchen"
                             )
                           }
                         >
-                          <Download className="h-4 w-4 mr-1" /> Export
+                          <Download className="h-4 w-4 mr-1" /> Export PDF
                         </Button>
                       </div>
                     </CardHeader>
-
                     <CardContent>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
                         <div>
-                          <strong>Total Revenue:</strong> ₵
-                          {session.totalRevenue.toFixed(2)}
+                          <strong>Total Revenue:</strong> ₵{session.totalRevenue.toFixed(2)}
                         </div>
                         <div>
                           <strong>Total Sales:</strong> {session.totalSales}
                         </div>
                       </div>
-
                       {session.sales.length ? (
                         <Table>
                           <TableHeader>
@@ -330,10 +366,8 @@ const Reports = () => {
                               <TableRow key={s.id}>
                                 <TableCell>{s.food_name}</TableCell>
                                 <TableCell>{s.quantity}</TableCell>
-                                <TableCell>{s.price.toFixed(2)}</TableCell>
-                                <TableCell>
-                                  {(s.price * s.quantity).toFixed(2)}
-                                </TableCell>
+                                <TableCell>₵{s.price.toFixed(2)}</TableCell>
+                                <TableCell>₵{(s.price * s.quantity).toFixed(2)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -348,9 +382,7 @@ const Reports = () => {
                 );
               })
           ) : (
-            <p className="text-sm text-gray-500 text-center">
-              No kitchen sessions found.
-            </p>
+            <p className="text-sm text-gray-500 text-center">No kitchen sessions found.</p>
           )}
         </div>
       )}
