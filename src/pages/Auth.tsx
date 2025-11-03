@@ -97,6 +97,7 @@ const Auth = () => {
         className="absolute inset-0 w-full h-full object-cover"
         src="/video.mp4"
         autoPlay
+        playsInline
         loop
         muted
       />
