@@ -21,7 +21,13 @@ export default function Categories() {
 
   // ✅ Track user
   const [user, setUser] = useState<any>(null);
-  const APPROVED_USER = "jadidianyamekyekorsah@gmail.com"; // admin email
+
+  // ✅ List of approved users who can manage categories
+  const APPROVED_USERS = [
+    "jadidianyamekyekorsah@gmail.com",
+    "djanmichael695@gmail.com",
+    "admin@mothercare.com",
+  ];
 
   useEffect(() => {
     const getUser = async () => {
@@ -30,6 +36,8 @@ export default function Categories() {
     };
     getUser();
   }, []);
+
+  const isApprovedUser = APPROVED_USERS.includes(user?.email);
 
   // ✅ Fetch categories (sorted alphabetically)
   const { data: categories = [] } = useQuery({
@@ -46,6 +54,10 @@ export default function Categories() {
   // ✅ Add category
   const addCategoryMutation = useMutation({
     mutationFn: async (name: string) => {
+      if (!isApprovedUser) {
+        toast.error("❌ You do not have permission to add categories.");
+        return;
+      }
       const { error } = await supabase.from("categories").insert([{ name }]);
       if (error) throw error;
     },
@@ -61,6 +73,10 @@ export default function Categories() {
   // ✅ Edit category
   const editCategoryMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      if (!isApprovedUser) {
+        toast.error("❌ You do not have permission to edit categories.");
+        return;
+      }
       const { error } = await supabase
         .from("categories")
         .update({ name })
@@ -78,6 +94,10 @@ export default function Categories() {
   // ✅ Delete category
   const deleteCategoryMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!isApprovedUser) {
+        toast.error("❌ You do not have permission to delete categories.");
+        return;
+      }
       const { error } = await supabase.from("categories").delete().eq("id", id);
       if (error) throw error;
     },
@@ -104,8 +124,8 @@ export default function Categories() {
           </p>
         </div>
 
-        {/* ✅ Add button only for admin */}
-        {user?.email === APPROVED_USER && (
+        {/* ✅ Add button only for approved users */}
+        {isApprovedUser && (
           <Button
             onClick={() => setShowAdd(true)}
             className="gap-2 text-sm sm:text-base px-3 sm:px-4 py-2 sm:py-3"
@@ -140,7 +160,7 @@ export default function Categories() {
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="py-3 px-4 font-semibold">Category</th>
-                  {user?.email === APPROVED_USER && (
+                  {isApprovedUser && (
                     <th className="py-3 px-4 text-right font-semibold">
                       Actions
                     </th>
@@ -155,8 +175,8 @@ export default function Categories() {
                   >
                     <td className="py-3 px-4">{cat.name}</td>
 
-                    {/* ✅ Actions visible only for admin */}
-                    {user?.email === APPROVED_USER && (
+                    {/* ✅ Actions visible only for approved users */}
+                    {isApprovedUser && (
                       <td className="py-3 px-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -203,6 +223,8 @@ export default function Categories() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              if (!isApprovedUser)
+                return toast.error("❌ Unauthorized action.");
               const form = e.target as HTMLFormElement;
               const name = (form.name as any).value.trim();
               if (!name) return toast.error("Name cannot be empty.");
@@ -236,6 +258,8 @@ export default function Categories() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (!isApprovedUser)
+                  return toast.error("❌ Unauthorized action.");
                 const form = e.target as HTMLFormElement;
                 const name = (form.name as any).value.trim();
                 if (!name) return toast.error("Name cannot be empty.");

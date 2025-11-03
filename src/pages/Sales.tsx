@@ -30,7 +30,11 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 2,
   }).format(amount);
 
-const APPROVED_USER = "jadidianyamekyekorsah@gmail.com";
+const APPROVED_USERS = [
+  "jadidianyamekyekorsah@gmail.com",
+  "djanmichael695@gmail.com",
+  "admin@mothercare.com",
+];
 
 const Sales = () => {
   const queryClient = useQueryClient();
@@ -51,6 +55,8 @@ const Sales = () => {
     getUser();
   }, []);
 
+  const isApprovedUser = APPROVED_USERS.includes(user?.email);
+
   // ✅ Fetch session
   const fetchCurrentSession = async () => {
     const { data, error } = await supabase
@@ -70,6 +76,8 @@ const Sales = () => {
 
   // ✅ Create new session + auto report
   const handleMakeAccount = async () => {
+    if (!isApprovedUser) return toast.error("❌ You are not authorized to create sessions.");
+
     try {
       const { data: lastSession } = await supabase
         .from("account_sessions")
@@ -91,22 +99,15 @@ const Sales = () => {
           );
           const totalSales = lastSessionSales.length;
 
-          const { error: reportError } = await supabase.from("reports").insert([
-            {
-              date: new Date().toISOString(),
-              total_revenue: totalRevenue,
-              total_sales: totalSales,
-              notes: `Auto report for ${new Date(
-                lastSession.accounted_date
-              ).toLocaleDateString()}`,
-            },
-          ]);
+          const { error: reportError } = await supabase.from("reports").insert([{
+            date: new Date().toISOString(),
+            total_revenue: totalRevenue,
+            total_sales: totalSales,
+            notes: `Auto report for ${new Date(lastSession.accounted_date).toLocaleDateString()}`,
+          }]);
 
           if (reportError) console.error(reportError.message);
-          else
-            toast.success(
-              `📊 Report added: ${totalSales} sales — ₵${totalRevenue.toFixed(2)}`
-            );
+          else toast.success(`📊 Report added: ${totalSales} sales — ₵${totalRevenue.toFixed(2)}`);
         }
       }
 
@@ -159,6 +160,7 @@ const Sales = () => {
   // ✅ Add Sale
   const addSaleMutation = useMutation({
     mutationFn: async (newSale: any) => {
+      if (!isApprovedUser) throw new Error("❌ You are not authorized to add sales.");
       if (!currentSession?.id) throw new Error("⚠️ No active session found.");
 
       const { data: product, error: fetchError } = await supabase
@@ -209,6 +211,7 @@ const Sales = () => {
   // ✅ Delete sale
   const deleteSaleMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!isApprovedUser) throw new Error("❌ You are not authorized to delete sales.");
       const { error } = await supabase.from("sales").delete().eq("id", id);
       if (error) throw error;
     },
@@ -248,7 +251,8 @@ const Sales = () => {
           </p>
         </div>
 
-        {user?.email === APPROVED_USER && (
+        {/* ✅ Only approved users can make accounts or add sales */}
+        {isApprovedUser && (
           <div className="flex flex-wrap gap-2">
             <Button onClick={handleMakeAccount} className="bg-green-400 hover:bg-green-500 text-black">
               Make Account
@@ -267,10 +271,8 @@ const Sales = () => {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    if (!selectedProduct || !quantity) {
-                      toast.error("⚠️ Select a product and quantity.");
-                      return;
-                    }
+                    if (!selectedProduct || !quantity)
+                      return toast.error("⚠️ Select a product and quantity.");
                     addSaleMutation.mutate({
                       product_id: selectedProduct.id,
                       quantity_sold: Number(quantity),
@@ -353,7 +355,7 @@ const Sales = () => {
         )}
       </div>
 
-      {/* Summary Cards (Dashboard Style) */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="shadow-sm rounded-xl border border-gray-200">
           <CardHeader className="pb-2">
@@ -406,9 +408,7 @@ const Sales = () => {
                   <th className="p-3">Category</th>
                   <th className="p-3 text-center">Quantity</th>
                   <th className="p-3 text-right">Total</th>
-                  {user?.email === APPROVED_USER && (
-                    <th className="p-3 text-right">Actions</th>
-                  )}
+                  {isApprovedUser && <th className="p-3 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -428,7 +428,7 @@ const Sales = () => {
                     <td className="p-3 text-right">
                       {formatCurrency(sale.total_price)}
                     </td>
-                    {user?.email === APPROVED_USER && (
+                    {isApprovedUser && (
                       <td className="p-3 text-right">
                         <Button
                           variant="destructive"

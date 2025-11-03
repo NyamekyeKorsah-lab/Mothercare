@@ -39,7 +39,13 @@ const Products = () => {
 
   // ✅ Track logged-in user
   const [user, setUser] = useState<any>(null);
-  const APPROVED_USER = "jadidianyamekyekorsah@gmail.com"; // your admin email
+
+  // ✅ List of approved users who can add/edit
+  const APPROVED_USERS = [
+    "jadidianyamekyekorsah@gmail.com",
+    "djanmichael695@gmail.com",
+    "admin@mothercare.com",
+  ];
 
   useEffect(() => {
     const getUser = async () => {
@@ -48,6 +54,9 @@ const Products = () => {
     };
     getUser();
   }, []);
+
+  // ✅ Check if current user is allowed
+  const isApprovedUser = APPROVED_USERS.includes(user?.email);
 
   // ✅ Fetch products
   const { data: products = [] } = useQuery({
@@ -85,6 +94,11 @@ const Products = () => {
   // ✅ Add product
   const addProductMutation = useMutation({
     mutationFn: async () => {
+      if (!isApprovedUser) {
+        toast.error("❌ You do not have permission to add products.");
+        return;
+      }
+
       const qty = Number(quantity) || 0;
       const reorder = Number(reorderLevel) || 0;
       const status = getStatus(qty, reorder);
@@ -114,6 +128,11 @@ const Products = () => {
   // ✅ Edit product
   const editProductMutation = useMutation({
     mutationFn: async () => {
+      if (!isApprovedUser) {
+        toast.error("❌ You do not have permission to edit products.");
+        return;
+      }
+
       if (!editingProduct) return;
       const qty = Number(quantity);
       const reorder = Number(reorderLevel);
@@ -154,6 +173,11 @@ const Products = () => {
   };
 
   const handleEditClick = (product: any) => {
+    if (!isApprovedUser) {
+      toast.error("❌ You do not have permission to edit products.");
+      return;
+    }
+
     setEditingProduct(product);
     setProductName(product.product_name);
     setQuantity(String(product.quantity));
@@ -187,8 +211,8 @@ const Products = () => {
           </p>
         </div>
 
-        {/* ✅ Add Product Button visible only to admin */}
-        {user?.email === APPROVED_USER && (
+        {/* ✅ Add Product Button visible only to approved users */}
+        {isApprovedUser && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base hover:scale-[1.02] transition-all duration-200">
@@ -287,7 +311,7 @@ const Products = () => {
                   <th className="p-3 w-[10%] text-center">Qty</th>
                   <th className="p-3 w-[15%] text-right">Price</th>
                   <th className="p-3 w-[15%] text-center">Status</th>
-                  {user?.email === APPROVED_USER && (
+                  {isApprovedUser && (
                     <th className="p-3 w-[15%] text-right">Actions</th>
                   )}
                 </tr>
@@ -322,8 +346,8 @@ const Products = () => {
                       )}
                     </td>
 
-                    {/* ✅ Edit button only for approved user */}
-                    {user?.email === APPROVED_USER && (
+                    {/* ✅ Edit button only for approved users */}
+                    {isApprovedUser && (
                       <td className="p-3 w-[15%] text-right">
                         <Button
                           variant="ghost"
