@@ -76,11 +76,7 @@ const Dashboard = () => {
 
   return (
     <div className="w-full px-2 sm:px-4 md:px-6 space-y-5 max-w-screen-xl mx-auto">
-      {/* Breadcrumb */}
-      <nav className="text-xs sm:text-sm text-muted-foreground mb-2">
-        <span className="hover:text-primary cursor-pointer">Home</span> ›{" "}
-        <span className="text-foreground font-medium">Dashboard</span>
-      </nav>
+      {/* ✅ Removed Breadcrumb */}
 
       {/* Header */}
       <div className="text-left">
@@ -125,7 +121,9 @@ const Dashboard = () => {
             title: "Total Sales",
             value: formatCurrency(totalRevenue),
             icon: <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />,
-            sub: `${totalSalesCount} sale${totalSalesCount !== 1 ? "s" : ""} this session`,
+            sub: `${totalSalesCount} sale${
+              totalSalesCount !== 1 ? "s" : ""
+            } this session`,
           },
         ].map((item, i) => (
           <Card
