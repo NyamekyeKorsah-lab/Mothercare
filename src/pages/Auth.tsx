@@ -91,8 +91,11 @@ const Auth = () => {
     <div className="relative flex items-center justify-center min-h-screen overflow-hidden">
       {/* Background video */}
       <video
+         ref={(el) => {
+          if (el) el.playbackRate = 0.5; // 👈 0.5 = half speed (slow motion)
+      }}
         className="absolute inset-0 w-full h-full object-cover"
-        src="/videos/auth-bg.mp4"
+        src="/video.mp4"
         autoPlay
         loop
         muted
