@@ -293,17 +293,20 @@ const Sales = () => {
                         <SelectValue placeholder="Select product" />
                       </SelectTrigger>
                       <SelectContent>
-                        {products.map((p) =>
-                          p.status === "Out of Stock" || p.quantity <= 0 ? (
-                            <SelectItem key={p.id} value={p.id} disabled>
-                              {p.product_name} — Out of Stock
-                            </SelectItem>
-                          ) : (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.product_name}
-                            </SelectItem>
-                          )
-                        )}
+                        {[...products]
+                          .sort((a, b) => a.product_name.localeCompare(b.product_name))
+                          .map((p) =>
+                            p.status === "Out of Stock" || p.quantity <= 0 ? (
+                              <SelectItem key={p.id} value={p.id} disabled>
+                                {p.product_name} — Out of Stock
+                              </SelectItem>
+                            ) : (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.product_name}
+                              </SelectItem>
+                            )
+                          )}
+
                       </SelectContent>
                     </Select>
                   </div>
