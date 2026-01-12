@@ -36,7 +36,7 @@ export const Sidebar = ({ onLinkClick }: { onLinkClick?: () => void }) => {
     { name: "Products", path: "/products", icon: Package },
     { name: "Categories", path: "/categories", icon: Layers },
     { name: "Sales", path: "/sales", icon: ShoppingCart },
-    { name: "Food Sales", path: "/foodsales", icon: Utensils },
+    //{ name: "Food Sales", path: "/foodsales", icon: Utensils },
     // 👇 Reports visible only to approved boss
     ...(user?.email === APPROVED_USER
       ? [{ name: "Reports", path: "/reports", icon: BarChart2 }]

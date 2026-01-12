@@ -25,7 +25,7 @@ export default function Categories() {
   // ✅ List of approved users who can manage categories
   const APPROVED_USERS = [
     "jadidianyamekyekorsah@gmail.com",
-    "djanmichael695@gmail.com",
+    "perpesi2005@gmail.com",
     "admin@mothercare.com",
   ];
 

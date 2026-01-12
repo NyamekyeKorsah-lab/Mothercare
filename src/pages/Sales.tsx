@@ -32,7 +32,7 @@ const formatCurrency = (amount: number) =>
 
 const APPROVED_USERS = [
   "jadidianyamekyekorsah@gmail.com",
-  "djanmichael695@gmail.com",
+  "perpesi2005@gmail.com",
   "admin@mothercare.com",
 ];
 
